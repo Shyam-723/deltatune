@@ -1,5 +1,5 @@
 using System;
-using System.Threading;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Windows.Media.Control;
 
@@ -7,45 +7,17 @@ namespace DeltaTune.Media
 {
     public class SystemMediaInfoProvider : IMediaInfoProvider, IDisposable
     {
-        public string Title
-        {
-            get { lock (titleLock) return title; }
-            private set { lock (titleLock) title = value; }
-        }
-
-        public string Artist
-        {
-            get { lock (artistLock) return artist; }
-            private set { lock (artistLock) artist = value; }
-        }
-
-        public PlaybackStatus Status
-        {
-            get { lock (statusLock) return status; }
-            private set { lock (statusLock) status = value; }
-        }
-
-        public bool Dirty
-        {
-            get { lock (dirtyLock) return dirty; }
-            set { lock (dirtyLock) dirty = value; }
-        }
-
+        public ConcurrentQueue<MediaInfo> UpdateQueue { get; }
+        
         private GlobalSystemMediaTransportControlsSessionManager currentSessionManager;
         private GlobalSystemMediaTransportControlsSession currentSession;
         
-        private string title = string.Empty;
-        private string artist = string.Empty;
-        private PlaybackStatus status = PlaybackStatus.Stopped;
-        private bool dirty = false;
-
-        private readonly object titleLock = new object();
-        private readonly object artistLock = new object();
-        private readonly object statusLock = new object();
-        private readonly object dirtyLock = new object();
+        private MediaInfo lastMediaInfo;
         
         public SystemMediaInfoProvider()
         {
+            UpdateQueue = new ConcurrentQueue<MediaInfo>();
+            
             Task.Run(async () =>
             {
                 GlobalSystemMediaTransportControlsSessionManager sessionManager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
@@ -79,14 +51,18 @@ namespace DeltaTune.Media
         private async void OnMediaPropertiesChanged(GlobalSystemMediaTransportControlsSession sender, MediaPropertiesChangedEventArgs args)
         {
             GlobalSystemMediaTransportControlsSessionMediaProperties mediaProperties = await sender.TryGetMediaPropertiesAsync();
-            if (mediaProperties != null)
+            if (mediaProperties != null && (mediaProperties.Title != lastMediaInfo.Title || mediaProperties.Artist != lastMediaInfo.Artist))
             {
-                if (mediaProperties.Artist != Artist || mediaProperties.Title != Title)
-                {
-                    Artist = mediaProperties.Artist;
-                    Title = mediaProperties.Title;
-                    Dirty = true;
-                }
+                string correctedArtist = mediaProperties.Artist.Trim();
+                string correctedTitle = mediaProperties.Title.Trim();
+                
+                // Remove YouTube's "- Topic" suffix
+                if(correctedArtist.EndsWith(" - Topic")) correctedArtist = correctedArtist.Substring(0, correctedArtist.Length - 8);
+                
+                MediaInfo update = new MediaInfo(correctedTitle, correctedArtist, lastMediaInfo.Status);
+                
+                UpdateQueue.Enqueue(update);
+                lastMediaInfo = update;
             }
         }
 
@@ -94,17 +70,11 @@ namespace DeltaTune.Media
         {
             GlobalSystemMediaTransportControlsSessionPlaybackInfo playbackInfo = sender.GetPlaybackInfo();
             PlaybackStatus newStatus = PlaybackStatusHelper.FromSystemPlaybackStatus(playbackInfo.PlaybackStatus);
-            if (newStatus != Status)
+            if (newStatus != lastMediaInfo.Status)
             {
-                Status = newStatus;
-                
-                if (Status == PlaybackStatus.Stopped)
-                {
-                    Artist = string.Empty;
-                    Title = string.Empty;
-                }
-                
-                Dirty = true;
+                MediaInfo update = new MediaInfo(lastMediaInfo.Title, lastMediaInfo.Artist, newStatus);
+                UpdateQueue.Enqueue(update);
+                lastMediaInfo = update;
             }
         }
 

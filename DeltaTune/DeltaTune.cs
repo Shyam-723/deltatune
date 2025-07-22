@@ -1,58 +1,67 @@
-﻿using DeltaTune.DependencyManagement;
+﻿using System;
+using DeltaTune.Display;
 using DeltaTune.Media;
+using DeltaTune.Window;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
 
 namespace DeltaTune
 {
     public class DeltaTune : Game
     {
-        private SpriteBatch spriteBatch;
-        private BitmapFont musicTitleFont;
-
+        private GraphicsDeviceManager graphicsDeviceManagerInstance;
+        private IWindowService windowService;
+        private IMediaInfoProvider mediaInfoProvider;
+        private IDisplayService displayService;
+        
         public DeltaTune()
         {
-            GlobalServices.ServiceRegistry = new ServiceRegistry();
+            graphicsDeviceManagerInstance = new GraphicsDeviceManager(this)
+            {
+                GraphicsProfile = GraphicsProfile.HiDef,
+                PreferredBackBufferWidth = 1,
+                PreferredBackBufferHeight = 1
+            };
             
-            GraphicsDeviceManager graphicsDeviceManagerInstance = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
-            IsMouseVisible = true;
-            
-            IMediaInfoProvider mediaInfoProvider = new SystemMediaInfoProvider();
-            GlobalServices.Register<IMediaInfoProvider>(mediaInfoProvider);
         }
 
         protected override void Initialize()
-        {
+        { 
+            windowService = new WindowService(this, graphicsDeviceManagerInstance);
+            mediaInfoProvider = new SystemMediaInfoProvider();
+            displayService = new DisplayService(mediaInfoProvider, GraphicsDevice);
+            
+            windowService.InitializeWindow();
+            
             base.Initialize();
         }
 
         protected override void LoadContent()
         {
-            spriteBatch = new SpriteBatch(GraphicsDevice);
-            musicTitleFont = BitmapFont.FromFile(GraphicsDevice, "Content/Fonts/MusicTitleFont.fnt");
-            musicTitleFont.FallbackCharacter = '▯';
+            displayService.LoadContent();
+            
+            base.LoadContent();
+        }
+
+        protected override void BeginRun()
+        {
+            displayService.BeginRun();
+            
+            base.BeginRun();
         }
 
         protected override void Update(GameTime gameTime)
         {
+            displayService.Update(gameTime);
+            
             base.Update(gameTime);
         }
 
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.Transparent);
-
-            IMediaInfoProvider mediaInfoProvider = GlobalServices.Get<IMediaInfoProvider>();
-
-            if (mediaInfoProvider.Status == PlaybackStatus.Playing)
-            {
-                spriteBatch.Begin(SpriteSortMode.BackToFront, BlendState.AlphaBlend, SamplerState.PointClamp);
-                spriteBatch.DrawString(musicTitleFont, $"♪~   {mediaInfoProvider.Title}", new Vector2(20, 20), Color.White, 0, Vector2.Zero, 3f, SpriteEffects.None, 0);
-                spriteBatch.End();
-            }
+            displayService.Draw(gameTime);
             
             base.Draw(gameTime);
         }
