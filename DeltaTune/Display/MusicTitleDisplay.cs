@@ -33,7 +33,10 @@ namespace DeltaTune.Display
                 animationTimer = 0;
             }
         }
-        
+
+        public bool DisappearAutomatically { get; set; } = true;
+
+        private const float AppearDelayLength = 0.5f;
         private const float AppearAnimationLength = 0.75f;
         private const float DisappearAnimationLength = 0.75f;
         private const float StayTime = 2f;
@@ -58,17 +61,27 @@ namespace DeltaTune.Display
 
         public void Update(GameTime gameTime)
         {
-            float progress;
+            float progress = 0f;
             switch (State)
             {
-                case MusicTitleDisplayState.Appearing:
+                case MusicTitleDisplayState.AppearingDelay:
                     if (animationTimer == 0)
                     {
                         opacity = 0;
                         positionOffset.X = 0;
                     }
                     
+                    if(animationTimer >= AppearDelayLength) State = MusicTitleDisplayState.Appearing;
+                    break;
+                case MusicTitleDisplayState.Appearing:
+                    if (animationTimer == 0)
+                    {
+                        opacity = 0;
+                        positionOffset.X = 0;
+                    }
+
                     progress = (float)(animationTimer / AppearAnimationLength);
+                    
                     opacity = MathHelper.Clamp(progress * 1.5f - 0.25f, 0, 1);
                     positionOffset.X = InterpolateQuadratic(SlideInDistance * ScaleFactor, 0, progress);
 
@@ -85,7 +98,7 @@ namespace DeltaTune.Display
                         positionOffset.X = 0;
                     }
                     
-                    if(animationTimer >= StayTime) State = MusicTitleDisplayState.Disappearing;
+                    if(DisappearAutomatically && animationTimer >= StayTime) State = MusicTitleDisplayState.Disappearing;
                     break;
                 
                 case MusicTitleDisplayState.Disappearing:
@@ -95,7 +108,7 @@ namespace DeltaTune.Display
                         positionOffset.X = 0;
                     }
                     
-                    progress = (float)(animationTimer / AppearAnimationLength);
+                    progress = (float)(animationTimer / DisappearAnimationLength);
                     opacity = 1 - progress;
                     positionOffset.X = InterpolateQuadratic(-SlideOutDistance * ScaleFactor, 0, 1 - progress);
                     
@@ -139,11 +152,6 @@ namespace DeltaTune.Display
                 case PlaybackStatus.Paused:
                     text = $"⏸~   {Content.Artist} - {Content.Title}";
                     break;
-                case PlaybackStatus.Stopped:
-                    text = string.Empty;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
             }
             
             textSize = font.MeasureString(text);

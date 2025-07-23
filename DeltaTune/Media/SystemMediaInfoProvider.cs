@@ -8,7 +8,6 @@ namespace DeltaTune.Media
     public class SystemMediaInfoProvider : IMediaInfoProvider, IDisposable
     {
         public ConcurrentQueue<MediaInfo> UpdateQueue { get; }
-        
         private GlobalSystemMediaTransportControlsSessionManager currentSessionManager;
         private GlobalSystemMediaTransportControlsSession currentSession;
         
@@ -28,23 +27,36 @@ namespace DeltaTune.Media
             }).Wait();
         }
         
+        public bool IsCurrentlyStopped()
+        {
+            lock (currentSessionManager)
+            {
+                if (currentSessionManager == null || currentSession == null) return true;
+            
+                return PlaybackStatusHelper.FromSystemPlaybackStatus(currentSession.GetPlaybackInfo().PlaybackStatus) == PlaybackStatus.Stopped;
+            }
+        }
+        
         private void OnCurrentSessionChanged(GlobalSystemMediaTransportControlsSessionManager sessionManager, CurrentSessionChangedEventArgs args)
         {
-            if (currentSession != null)
+            lock (currentSessionManager)
             {
-                currentSession.MediaPropertiesChanged -= OnMediaPropertiesChanged;
-                currentSession.PlaybackInfoChanged -= OnPlaybackInfoChanged;
-            }
+                if (currentSession != null)
+                {
+                    currentSession.MediaPropertiesChanged -= OnMediaPropertiesChanged;
+                    currentSession.PlaybackInfoChanged -= OnPlaybackInfoChanged;
+                }
             
-            GlobalSystemMediaTransportControlsSession session = sessionManager.GetCurrentSession();
-            currentSession = session;
+                GlobalSystemMediaTransportControlsSession session = sessionManager.GetCurrentSession();
+                currentSession = session;
             
-            if (session != null)
-            {
-                session.MediaPropertiesChanged += OnMediaPropertiesChanged;
-                OnMediaPropertiesChanged(session, null);
-                session.PlaybackInfoChanged += OnPlaybackInfoChanged;
-                OnPlaybackInfoChanged(session, null);
+                if (session != null)
+                {
+                    session.MediaPropertiesChanged += OnMediaPropertiesChanged;
+                    OnMediaPropertiesChanged(session, null);
+                    session.PlaybackInfoChanged += OnPlaybackInfoChanged;
+                    OnPlaybackInfoChanged(session, null);
+                }
             }
         }
         

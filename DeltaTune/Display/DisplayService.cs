@@ -8,7 +8,9 @@ namespace DeltaTune.Display
 {
     public class DisplayService : IDisplayService
     {
-        private const double SwapThrottleInterval = 2.75f;
+        private const double SwapThrottleInterval = 2;
+        private const double LongSwapThrottleInterval = 2.5;
+        private const double LastMediaInfoUpdateStopCheckDelay = 1;
         
         private readonly IMediaInfoProvider mediaInfoProvider;
         private readonly GraphicsDevice graphicsDevice;
@@ -19,10 +21,13 @@ namespace DeltaTune.Display
         private MediaInfo currentMediaInfo;
         private IMusicTitleDisplay primaryDisplay;
         private IMusicTitleDisplay secondaryDisplay;
-        private double swapThrottleTime;
+        private double lastSwapTime;
+        private bool disappearAutomatically = true;
         private bool showPlaybackStatus = false;
         private bool previouslyPaused = false;
         private bool isFirstReceivedMediaUpdate = true;
+        private double lastMediaInfoUpdateTime;
+        private double currentSwapThrottleInterval = SwapThrottleInterval;
         
         public DisplayService(IMediaInfoProvider mediaInfoProvider, GraphicsDevice graphicsDevice)
         {
@@ -42,12 +47,14 @@ namespace DeltaTune.Display
         {
             primaryDisplay = new MusicTitleDisplay(musicTitleFont)
             {
-                ScaleFactor = 3
+                ScaleFactor = 3,
+                DisappearAutomatically = disappearAutomatically
             };
             
             secondaryDisplay = new MusicTitleDisplay(musicTitleFont)            
             {
-                ScaleFactor = 3
+                ScaleFactor = 3,
+                DisappearAutomatically = disappearAutomatically
             };
         }
 
@@ -56,8 +63,6 @@ namespace DeltaTune.Display
             bool titleChanged = false, artistChanged = false, statusChanged = false;
             while (mediaInfoProvider.UpdateQueue.TryDequeue(out MediaInfo mediaInfo))
             {
-                Console.WriteLine(mediaInfo);
-
                 if (isFirstReceivedMediaUpdate)
                 {
                     if (!showPlaybackStatus && mediaInfo.Status != PlaybackStatus.Playing)
@@ -91,23 +96,48 @@ namespace DeltaTune.Display
                 statusChanged |= mediaInfo.Status != currentMediaInfo.Status;
                 
                 currentMediaInfo = mediaInfo;
+                lastMediaInfoUpdateTime = gameTime.TotalGameTime.TotalSeconds;
+            }
+
+            if (lastMediaInfoUpdateTime + LastMediaInfoUpdateStopCheckDelay < gameTime.TotalGameTime.TotalSeconds)
+            {
+                if(mediaInfoProvider.IsCurrentlyStopped())
+                {
+                    currentMediaInfo.Status = PlaybackStatus.Stopped;
+                    if (primaryDisplay.State != MusicTitleDisplayState.Hidden &&
+                        primaryDisplay.State != MusicTitleDisplayState.Disappearing)
+                    {
+                        primaryDisplay.State = MusicTitleDisplayState.Disappearing;
+                        lastSwapTime = gameTime.TotalGameTime.TotalSeconds;
+                    }
+                }
+                
+                lastMediaInfoUpdateTime = gameTime.TotalGameTime.TotalSeconds;
             }
             
             if (titleChanged || artistChanged || statusChanged)
             {
-                if (IsSwapThrottled(gameTime.TotalGameTime.TotalSeconds))
+                if (IsSwapThrottled(gameTime.TotalGameTime.TotalSeconds) || (!disappearAutomatically && !(titleChanged || artistChanged)))
                 {
-                    if (primaryDisplay.State != MusicTitleDisplayState.Appearing)
+                    if (primaryDisplay.State == MusicTitleDisplayState.Visible || primaryDisplay.State == MusicTitleDisplayState.Disappearing)
                     {
                         primaryDisplay.State = MusicTitleDisplayState.Visible;
+                    } 
+                    else if (primaryDisplay.State == MusicTitleDisplayState.AppearingDelay || primaryDisplay.State == MusicTitleDisplayState.Hidden)
+                    {
+                        primaryDisplay.State = MusicTitleDisplayState.Appearing;
                     }
                     
-                    swapThrottleTime = gameTime.TotalGameTime.TotalSeconds;
+                    if (!(!disappearAutomatically && !(titleChanged || artistChanged)))
+                    {
+                        currentSwapThrottleInterval = SwapThrottleInterval;
+                        lastSwapTime = gameTime.TotalGameTime.TotalSeconds;
+                    }
                 }
                 else
                 {
                     SwapAndShowPrimaryDisplay();
-                    swapThrottleTime = gameTime.TotalGameTime.TotalSeconds;
+                    lastSwapTime = gameTime.TotalGameTime.TotalSeconds;
                 }
             }
             
@@ -128,18 +158,31 @@ namespace DeltaTune.Display
         private void SwapAndShowPrimaryDisplay()
         {
             (primaryDisplay, secondaryDisplay) = (secondaryDisplay, primaryDisplay);
-                
-            primaryDisplay.State = MusicTitleDisplayState.Appearing;
+
+            if (secondaryDisplay.State == MusicTitleDisplayState.Hidden)
+            {
+                primaryDisplay.State = MusicTitleDisplayState.Appearing;
+                currentSwapThrottleInterval = SwapThrottleInterval;
+            }
+            else
+            {
+                primaryDisplay.State = MusicTitleDisplayState.AppearingDelay;
+                currentSwapThrottleInterval = LongSwapThrottleInterval;
+            }
                 
             if (secondaryDisplay.State == MusicTitleDisplayState.Visible || secondaryDisplay.State == MusicTitleDisplayState.Appearing)
             {
                 secondaryDisplay.State = MusicTitleDisplayState.Disappearing;
             }
+            else if (secondaryDisplay.State == MusicTitleDisplayState.AppearingDelay)
+            {
+                secondaryDisplay.State = MusicTitleDisplayState.Hidden;
+            }
         }
 
         private bool IsSwapThrottled(double currentTime)
         {
-            return currentTime != 0 && swapThrottleTime + SwapThrottleInterval >= currentTime;
+            return currentTime != 0 && lastSwapTime + currentSwapThrottleInterval >= currentTime;
         }
     }
 }

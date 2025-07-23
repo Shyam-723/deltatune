@@ -12,7 +12,7 @@ namespace DeltaTune.Media
                 case GlobalSystemMediaTransportControlsSessionPlaybackStatus.Closed:
                     return PlaybackStatus.Stopped;
                 case GlobalSystemMediaTransportControlsSessionPlaybackStatus.Opened:
-                    return PlaybackStatus.Stopped;
+                    return PlaybackStatus.Paused;
                 case GlobalSystemMediaTransportControlsSessionPlaybackStatus.Changing:
                     return PlaybackStatus.Stopped;
                 case GlobalSystemMediaTransportControlsSessionPlaybackStatus.Stopped:
