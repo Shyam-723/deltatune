@@ -1,7 +1,11 @@
 using System;
+using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using DeltaTune.Settings;
 using Microsoft.Xna.Framework;
+using Point = Microsoft.Xna.Framework.Point;
+using Rectangle = Microsoft.Xna.Framework.Rectangle;
 
 namespace DeltaTune.Window
 {
@@ -21,6 +25,8 @@ namespace DeltaTune.Window
         private const int WS_EX_LAYERED = 0x00080000;
         private const int WS_EX_TOPMOST = 0x00000008;
         private const int WS_EX_TRANSPARENT = 0x00000020;
+        private const int WS_EX_TOOLWINDOW = 0x00000080;
+        private const int WS_EX_APPWINDOW = 0x00040000;
         private static readonly IntPtr HWND_TOPMOST = (IntPtr)(-1);
         private const int SWP_NOMOVE = 0x0002;
         private const int SWP_NOSIZE = 0x0001;
@@ -28,12 +34,14 @@ namespace DeltaTune.Window
         private readonly Game game;
         private readonly GameWindow window;
         private readonly GraphicsDeviceManager graphicsDeviceManager;
+        private readonly ISettingsMenu settingsMenu;
 
-        public WindowService(Game game, GraphicsDeviceManager graphicsDeviceManager)
+        public WindowService(Game game, GraphicsDeviceManager graphicsDeviceManager, ISettingsMenu settingsMenu)
         {
             this.game = game;
             this.window = game.Window;
             this.graphicsDeviceManager = graphicsDeviceManager;
+            this.settingsMenu = settingsMenu;
         }
 
         public void InitializeWindow()
@@ -49,7 +57,7 @@ namespace DeltaTune.Window
             window.IsBorderless = true;
             window.AllowUserResizing = false;
             
-            SetWindowLong(windowHandle, GWL_EXSTYLE, WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOPMOST);
+            SetWindowLong(windowHandle, GWL_EXSTYLE, WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW);
             SetLayeredWindowAttributes(windowHandle, 0, 255, LWA_ALPHA);
             
             int[] margins = { -1 };
@@ -60,6 +68,8 @@ namespace DeltaTune.Window
             Rectangle currentScreenBounds = GetCurrentScreenBounds();
             SetWindowSize(new Point(currentScreenBounds.Width, 17 * 3));
             SetFractionalWindowPosition(new Vector2(0, 0));
+            
+            CreateTrayIcon(windowHandle);
         }
 
         public void SetFractionalWindowPosition(Vector2 fractionalPosition)
@@ -82,6 +92,28 @@ namespace DeltaTune.Window
             graphicsDeviceManager.PreferredBackBufferWidth = size.X;
             graphicsDeviceManager.PreferredBackBufferHeight = size.Y;
             graphicsDeviceManager.ApplyChanges();
+        }
+
+        private void CreateTrayIcon(IntPtr windowHandle)
+        {
+            Form form = (Form)Control.FromHandle(windowHandle);
+            Icon icon = form.Icon;
+            NotifyIcon notifyIcon = new NotifyIcon();
+            notifyIcon.Icon = icon;
+            notifyIcon.Text = "Right-click to open the settings menu";
+            notifyIcon.Visible = true;
+
+            notifyIcon.BalloonTipTitle = "DeltaTune is now running!";
+            notifyIcon.BalloonTipText = "Play some music to get started or click the DeltaTune icon in your system tray for customization options.";
+            notifyIcon.ShowBalloonTip(1000);
+
+            notifyIcon.MouseClick += (sender, args) =>
+            {
+                if (args.Button == MouseButtons.Left || args.Button == MouseButtons.Right)
+                {
+                    settingsMenu.Show();
+                }
+            };
         }
     }
 }

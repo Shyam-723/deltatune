@@ -1,4 +1,3 @@
-using System;
 using DeltaTune.Media;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;

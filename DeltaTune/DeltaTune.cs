@@ -1,6 +1,6 @@
-﻿using System;
-using DeltaTune.Display;
+﻿using DeltaTune.Display;
 using DeltaTune.Media;
+using DeltaTune.Settings;
 using DeltaTune.Window;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -13,6 +13,7 @@ namespace DeltaTune
         private IWindowService windowService;
         private IMediaInfoProvider mediaInfoProvider;
         private IDisplayService displayService;
+        private ISettingsMenu settingsMenu;
         
         public DeltaTune()
         {
@@ -28,7 +29,8 @@ namespace DeltaTune
 
         protected override void Initialize()
         { 
-            windowService = new WindowService(this, graphicsDeviceManagerInstance);
+            settingsMenu = new SettingsMenu();
+            windowService = new WindowService(this, graphicsDeviceManagerInstance, settingsMenu);
             mediaInfoProvider = new SystemMediaInfoProvider();
             displayService = new DisplayService(mediaInfoProvider, GraphicsDevice);
             
