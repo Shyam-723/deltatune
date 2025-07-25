@@ -35,6 +35,7 @@ namespace DeltaTune.Display
         }
 
         public bool DisappearAutomatically { get; set; } = true;
+        public bool ShowPlaybackStatus { get; set; } = true;
 
         private const float AppearDelayLength = 0.5f;
         private const float AppearAnimationLength = 0.75f;
@@ -97,8 +98,17 @@ namespace DeltaTune.Display
                         opacity = 1;
                         positionOffset.X = 0;
                     }
-                    
-                    if(DisappearAutomatically && animationTimer >= StayTime) State = MusicTitleDisplayState.Disappearing;
+
+                    if (DisappearAutomatically && animationTimer >= StayTime)
+                    {
+                        State = MusicTitleDisplayState.Disappearing;
+                    }
+
+                    if (!DisappearAutomatically && !ShowPlaybackStatus && animationTimer >= StayTime &&
+                        (content.Status == PlaybackStatus.Stopped || content.Status == PlaybackStatus.Paused))
+                    {
+                        State = MusicTitleDisplayState.Disappearing;
+                    }
                     break;
                 
                 case MusicTitleDisplayState.Disappearing:
@@ -144,14 +154,23 @@ namespace DeltaTune.Display
 
         private void UpdateText()
         {
-            switch (Content.Status)
+            if (State == MusicTitleDisplayState.Disappearing || State == MusicTitleDisplayState.Hidden) return;
+            
+            if (ShowPlaybackStatus)
             {
-                case PlaybackStatus.Playing:
-                    text = $"♪~   {Content.Artist} - {Content.Title}";
-                    break;
-                case PlaybackStatus.Paused:
-                    text = $"⏸~   {Content.Artist} - {Content.Title}";
-                    break;
+                switch (Content.Status)
+                {
+                    case PlaybackStatus.Playing:
+                        text = $"♪~   {Content.Artist} - {Content.Title}";
+                        break;
+                    case PlaybackStatus.Paused:
+                        text = $"⏸~   {Content.Artist} - {Content.Title}";
+                        break;
+                }
+            }
+            else
+            {
+                text = $"♪~   {Content.Artist} - {Content.Title}";
             }
             
             textSize = font.MeasureString(text);

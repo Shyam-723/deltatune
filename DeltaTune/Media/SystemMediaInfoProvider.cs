@@ -69,7 +69,23 @@ namespace DeltaTune.Media
                 string correctedTitle = mediaProperties.Title.Trim();
                 
                 // Remove YouTube's "- Topic" suffix
-                if(correctedArtist.EndsWith(" - Topic")) correctedArtist = correctedArtist.Substring(0, correctedArtist.Length - 8);
+                if (correctedArtist.EndsWith(" - Topic"))
+                {
+                    correctedArtist = correctedArtist.Substring(0, correctedArtist.Length - 8);
+                }
+                
+                // Remove artist prefix from the title if it exists
+                if (correctedTitle.StartsWith($"{correctedArtist} - "))
+                {
+                    correctedTitle = correctedTitle.Remove(0, $"{correctedArtist} - ".Length);
+                }
+                
+                // Remove artist suffix from the title if it exists
+                if (correctedTitle.EndsWith($" - {correctedArtist}"))
+                {
+                    int startIndex = correctedTitle.LastIndexOf($" - {correctedArtist}", StringComparison.Ordinal);
+                    correctedTitle = correctedTitle.Remove(startIndex);
+                }
                 
                 MediaInfo update = new MediaInfo(correctedTitle, correctedArtist, lastMediaInfo.Status);
                 

@@ -66,7 +66,7 @@ namespace DeltaTune.Window
             SetWindowPos(window.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             
             Rectangle currentScreenBounds = GetCurrentScreenBounds();
-            SetWindowSize(new Point(currentScreenBounds.Width, 17 * 3));
+            SetWindowSize(new Point(currentScreenBounds.Width, 17 * 4));
             SetFractionalWindowPosition(new Vector2(0, 0));
             
             CreateTrayIcon(windowHandle);

@@ -12,6 +12,7 @@ namespace DeltaTune.Display
         int ScaleFactor { get; set; }
         MusicTitleDisplayState State { get; set; }
         bool DisappearAutomatically { get; set; }
+        bool ShowPlaybackStatus { get; set; }
         void Update(GameTime gameTime);
         void Draw(SpriteBatch spriteBatch, GameTime gameTime);
     }

@@ -1,3 +1,4 @@
+using System;
 using DeltaTune.Media;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -7,8 +8,6 @@ namespace DeltaTune.Display
 {
     public class DisplayService : IDisplayService
     {
-        private const double SwapThrottleInterval = 2;
-        private const double LongSwapThrottleInterval = 2.5;
         private const double LastMediaInfoUpdateStopCheckDelay = 1;
         
         private readonly IMediaInfoProvider mediaInfoProvider;
@@ -20,13 +19,10 @@ namespace DeltaTune.Display
         private MediaInfo currentMediaInfo;
         private IMusicTitleDisplay primaryDisplay;
         private IMusicTitleDisplay secondaryDisplay;
-        private double lastSwapTime;
         private bool disappearAutomatically = true;
         private bool showPlaybackStatus = false;
-        private bool previouslyPaused = false;
-        private bool isFirstReceivedMediaUpdate = true;
+
         private double lastMediaInfoUpdateTime;
-        private double currentSwapThrottleInterval = SwapThrottleInterval;
         
         public DisplayService(IMediaInfoProvider mediaInfoProvider, GraphicsDevice graphicsDevice)
         {
@@ -46,14 +42,16 @@ namespace DeltaTune.Display
         {
             primaryDisplay = new MusicTitleDisplay(musicTitleFont)
             {
-                ScaleFactor = 3,
-                DisappearAutomatically = disappearAutomatically
+                ScaleFactor = 4,
+                DisappearAutomatically = disappearAutomatically,
+                ShowPlaybackStatus = showPlaybackStatus
             };
             
             secondaryDisplay = new MusicTitleDisplay(musicTitleFont)            
             {
-                ScaleFactor = 3,
-                DisappearAutomatically = disappearAutomatically
+                ScaleFactor = 4,
+                DisappearAutomatically = disappearAutomatically,
+                ShowPlaybackStatus = showPlaybackStatus
             };
         }
 
@@ -62,34 +60,6 @@ namespace DeltaTune.Display
             bool titleChanged = false, artistChanged = false, statusChanged = false;
             while (mediaInfoProvider.UpdateQueue.TryDequeue(out MediaInfo mediaInfo))
             {
-                if (isFirstReceivedMediaUpdate)
-                {
-                    if (!showPlaybackStatus && mediaInfo.Status != PlaybackStatus.Playing)
-                    {
-                        continue;
-                    }
-                    
-                    isFirstReceivedMediaUpdate = false;
-                }
-                
-                if (!showPlaybackStatus && mediaInfo.Status == PlaybackStatus.Paused)
-                {
-                    mediaInfo.Status = PlaybackStatus.Playing;
-                    previouslyPaused = true;
-                } 
-                else if (!showPlaybackStatus && mediaInfo.Status == PlaybackStatus.Playing)
-                {
-                    if (currentMediaInfo.Artist == mediaInfo.Artist &&
-                        currentMediaInfo.Title == mediaInfo.Title &&
-                        previouslyPaused)
-                    {
-                        statusChanged = true;
-                    }
-                    
-                    mediaInfo.Status = PlaybackStatus.Playing;
-                    previouslyPaused = false;
-                }
-                
                 titleChanged |= mediaInfo.Title != currentMediaInfo.Title;
                 artistChanged |= mediaInfo.Artist != currentMediaInfo.Artist;
                 statusChanged |= mediaInfo.Status != currentMediaInfo.Status;
@@ -98,52 +68,78 @@ namespace DeltaTune.Display
                 lastMediaInfoUpdateTime = gameTime.TotalGameTime.TotalSeconds;
             }
 
+            bool shouldUpdateDisplayState = showPlaybackStatus ? titleChanged || artistChanged || statusChanged : titleChanged || artistChanged;
+
+            // Even if playback status shouldn't be shown, show the song title again when resuming playback
+            if (!shouldUpdateDisplayState && !showPlaybackStatus && statusChanged &&
+                currentMediaInfo.Status == PlaybackStatus.Playing)
+            {
+                shouldUpdateDisplayState = true;
+            }
+            
+            // If it's been too long since the last media info update, check if anything is still playing
+            // If not, make the display disappear
             if (lastMediaInfoUpdateTime + LastMediaInfoUpdateStopCheckDelay < gameTime.TotalGameTime.TotalSeconds)
             {
                 if(mediaInfoProvider.IsCurrentlyStopped())
                 {
                     currentMediaInfo.Status = PlaybackStatus.Stopped;
-                    if (primaryDisplay.State != MusicTitleDisplayState.Hidden &&
-                        primaryDisplay.State != MusicTitleDisplayState.Disappearing)
+                    
+                    if (primaryDisplay.State != MusicTitleDisplayState.Disappearing &&
+                        primaryDisplay.State != MusicTitleDisplayState.Hidden)
                     {
                         primaryDisplay.State = MusicTitleDisplayState.Disappearing;
-                        lastSwapTime = gameTime.TotalGameTime.TotalSeconds;
                     }
                 }
                 
                 lastMediaInfoUpdateTime = gameTime.TotalGameTime.TotalSeconds;
             }
             
-            if (titleChanged || artistChanged || statusChanged)
+            // If the display is hidden and doesn't show playback status,
+            // only start showing it once the media state changes to playing
+            if (!showPlaybackStatus && 
+                shouldUpdateDisplayState && 
+                currentMediaInfo.Status != PlaybackStatus.Playing && 
+                primaryDisplay.State == MusicTitleDisplayState.Hidden)
             {
-                if (IsSwapThrottled(gameTime.TotalGameTime.TotalSeconds) || (!disappearAutomatically && !(titleChanged || artistChanged)))
+                shouldUpdateDisplayState = false;
+            }
+            
+            if (shouldUpdateDisplayState)
+            {
+                switch (primaryDisplay.State)
                 {
-                    if (primaryDisplay.State == MusicTitleDisplayState.Visible || primaryDisplay.State == MusicTitleDisplayState.Disappearing)
-                    {
-                        primaryDisplay.State = MusicTitleDisplayState.Visible;
-                    } 
-                    else if (primaryDisplay.State == MusicTitleDisplayState.AppearingDelay || primaryDisplay.State == MusicTitleDisplayState.Hidden)
-                    {
-                        primaryDisplay.State = MusicTitleDisplayState.Appearing;
-                    }
-                    
-                    if (!(!disappearAutomatically && !(titleChanged || artistChanged)))
-                    {
-                        currentSwapThrottleInterval = SwapThrottleInterval;
-                        lastSwapTime = gameTime.TotalGameTime.TotalSeconds;
-                    }
-                }
-                else
-                {
-                    SwapAndShowPrimaryDisplay();
-                    lastSwapTime = gameTime.TotalGameTime.TotalSeconds;
+                    case MusicTitleDisplayState.Hidden:
+                        SwapAndShowPrimaryDisplay();
+                        break;
+                    case MusicTitleDisplayState.AppearingDelay:
+                        break;
+                    case MusicTitleDisplayState.Appearing:
+                        break;
+                    case MusicTitleDisplayState.Visible:
+                        // Make the slide animation appear even if the display doesn't disappear automatically
+                        if (!disappearAutomatically && (titleChanged || artistChanged))
+                        {
+                            SwapAndShowPrimaryDisplay();
+                        }
+                        else
+                        {
+                            primaryDisplay.State = MusicTitleDisplayState.Visible;
+                        }
+
+                        break;
+                    case MusicTitleDisplayState.Disappearing:
+                        SwapAndShowPrimaryDisplay();
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
             }
             
-            primaryDisplay.Content = currentMediaInfo;
-            
-            secondaryDisplay.Update(gameTime);
             primaryDisplay.Update(gameTime);
+            secondaryDisplay.Update(gameTime);
+            
+            primaryDisplay.Content = currentMediaInfo;
         }
         
         public void Draw(GameTime gameTime)
@@ -161,27 +157,16 @@ namespace DeltaTune.Display
             if (secondaryDisplay.State == MusicTitleDisplayState.Hidden)
             {
                 primaryDisplay.State = MusicTitleDisplayState.Appearing;
-                currentSwapThrottleInterval = SwapThrottleInterval;
             }
             else
             {
-                primaryDisplay.State = MusicTitleDisplayState.AppearingDelay;
-                currentSwapThrottleInterval = LongSwapThrottleInterval;
-            }
+                if (secondaryDisplay.State != MusicTitleDisplayState.Disappearing)
+                {
+                    secondaryDisplay.State = MusicTitleDisplayState.Disappearing;
+                }
                 
-            if (secondaryDisplay.State == MusicTitleDisplayState.Visible || secondaryDisplay.State == MusicTitleDisplayState.Appearing)
-            {
-                secondaryDisplay.State = MusicTitleDisplayState.Disappearing;
+                primaryDisplay.State = MusicTitleDisplayState.AppearingDelay;
             }
-            else if (secondaryDisplay.State == MusicTitleDisplayState.AppearingDelay)
-            {
-                secondaryDisplay.State = MusicTitleDisplayState.Hidden;
-            }
-        }
-
-        private bool IsSwapThrottled(double currentTime)
-        {
-            return currentTime != 0 && lastSwapTime + currentSwapThrottleInterval >= currentTime;
         }
     }
 }
