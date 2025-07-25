@@ -99,7 +99,7 @@ namespace DeltaTune.Display
                         break;
                     case MusicTitleDisplayState.Visible:
                         // Make the slide animation appear even if the display doesn't disappear automatically
-                        if (!settingsService.HideAutomatically.Value && (titleChanged || artistChanged))
+                        if (titleChanged || artistChanged)
                         {
                             SwapAndShowPrimaryDisplay();
                         }
