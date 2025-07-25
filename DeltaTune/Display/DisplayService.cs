@@ -1,5 +1,6 @@
 using System;
 using DeltaTune.Media;
+using DeltaTune.Settings;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
@@ -10,55 +11,35 @@ namespace DeltaTune.Display
     {
         private const double LastMediaInfoUpdateStopCheckDelay = 1;
         
-        private readonly IMediaInfoProvider mediaInfoProvider;
-        private readonly GraphicsDevice graphicsDevice;
-        
-        private SpriteBatch spriteBatch;
-        private BitmapFont musicTitleFont;
+        private readonly IMediaInfoService mediaInfoService;
+        private readonly ISettingsService settingsService;
+        private readonly Func<Vector2> windowSizeProvider;
+        private readonly BitmapFont musicTitleFont;
         
         private MediaInfo currentMediaInfo;
         private IMusicTitleDisplay primaryDisplay;
         private IMusicTitleDisplay secondaryDisplay;
-        private bool disappearAutomatically = true;
-        private bool showPlaybackStatus = false;
 
         private double lastMediaInfoUpdateTime;
         
-        public DisplayService(IMediaInfoProvider mediaInfoProvider, GraphicsDevice graphicsDevice)
+        public DisplayService(IMediaInfoService mediaInfoService, ISettingsService settingsService, BitmapFont musicTitleFont, Func<Vector2> windowSizeProvider)
         {
-            this.mediaInfoProvider = mediaInfoProvider;
-            this.graphicsDevice = graphicsDevice;
-        }
-
-        public void LoadContent()
-        {
-            musicTitleFont = BitmapFont.FromFile(graphicsDevice, "Content/Fonts/MusicTitleFont.fnt");
-            musicTitleFont.FallbackCharacter = '▯';
-            
-            spriteBatch = new SpriteBatch(graphicsDevice);
+            this.mediaInfoService = mediaInfoService;
+            this.settingsService = settingsService;
+            this.musicTitleFont = musicTitleFont;
+            this.windowSizeProvider = windowSizeProvider;
         }
 
         public void BeginRun()
         {
-            primaryDisplay = new MusicTitleDisplay(musicTitleFont)
-            {
-                ScaleFactor = 4,
-                DisappearAutomatically = disappearAutomatically,
-                ShowPlaybackStatus = showPlaybackStatus
-            };
-            
-            secondaryDisplay = new MusicTitleDisplay(musicTitleFont)            
-            {
-                ScaleFactor = 4,
-                DisappearAutomatically = disappearAutomatically,
-                ShowPlaybackStatus = showPlaybackStatus
-            };
+            primaryDisplay = new MusicTitleDisplay(musicTitleFont, settingsService, windowSizeProvider);
+            secondaryDisplay = new MusicTitleDisplay(musicTitleFont, settingsService, windowSizeProvider);
         }
 
         public void Update(GameTime gameTime)
         {
             bool titleChanged = false, artistChanged = false, statusChanged = false;
-            while (mediaInfoProvider.UpdateQueue.TryDequeue(out MediaInfo mediaInfo))
+            while (mediaInfoService.UpdateQueue.TryDequeue(out MediaInfo mediaInfo))
             {
                 titleChanged |= mediaInfo.Title != currentMediaInfo.Title;
                 artistChanged |= mediaInfo.Artist != currentMediaInfo.Artist;
@@ -68,10 +49,10 @@ namespace DeltaTune.Display
                 lastMediaInfoUpdateTime = gameTime.TotalGameTime.TotalSeconds;
             }
 
-            bool shouldUpdateDisplayState = showPlaybackStatus ? titleChanged || artistChanged || statusChanged : titleChanged || artistChanged;
+            bool shouldUpdateDisplayState = settingsService.ShowPlaybackStatus.Value ? titleChanged || artistChanged || statusChanged : titleChanged || artistChanged;
 
             // Even if playback status shouldn't be shown, show the song title again when resuming playback
-            if (!shouldUpdateDisplayState && !showPlaybackStatus && statusChanged &&
+            if (!shouldUpdateDisplayState && !settingsService.ShowPlaybackStatus.Value && statusChanged &&
                 currentMediaInfo.Status == PlaybackStatus.Playing)
             {
                 shouldUpdateDisplayState = true;
@@ -81,7 +62,7 @@ namespace DeltaTune.Display
             // If not, make the display disappear
             if (lastMediaInfoUpdateTime + LastMediaInfoUpdateStopCheckDelay < gameTime.TotalGameTime.TotalSeconds)
             {
-                if(mediaInfoProvider.IsCurrentlyStopped())
+                if(mediaInfoService.IsCurrentlyStopped())
                 {
                     currentMediaInfo.Status = PlaybackStatus.Stopped;
                     
@@ -97,7 +78,7 @@ namespace DeltaTune.Display
             
             // If the display is hidden and doesn't show playback status,
             // only start showing it once the media state changes to playing
-            if (!showPlaybackStatus && 
+            if (!settingsService.ShowPlaybackStatus.Value && 
                 shouldUpdateDisplayState && 
                 currentMediaInfo.Status != PlaybackStatus.Playing && 
                 primaryDisplay.State == MusicTitleDisplayState.Hidden)
@@ -118,7 +99,7 @@ namespace DeltaTune.Display
                         break;
                     case MusicTitleDisplayState.Visible:
                         // Make the slide animation appear even if the display doesn't disappear automatically
-                        if (!disappearAutomatically && (titleChanged || artistChanged))
+                        if (!settingsService.HideAutomatically.Value && (titleChanged || artistChanged))
                         {
                             SwapAndShowPrimaryDisplay();
                         }
@@ -142,7 +123,7 @@ namespace DeltaTune.Display
             primaryDisplay.Content = currentMediaInfo;
         }
         
-        public void Draw(GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
         {
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
             primaryDisplay.Draw(spriteBatch, gameTime);

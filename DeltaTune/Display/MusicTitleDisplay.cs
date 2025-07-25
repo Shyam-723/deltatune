@@ -1,14 +1,16 @@
 using System;
 using DeltaTune.Media;
+using DeltaTune.Settings;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
+using R3;
 using Color = Microsoft.Xna.Framework.Color;
 
 namespace DeltaTune.Display
 {
-    public class MusicTitleDisplay : IMusicTitleDisplay
+    public class MusicTitleDisplay : IMusicTitleDisplay, IDisposable
     {
         public MediaInfo Content
         {
@@ -19,11 +21,7 @@ namespace DeltaTune.Display
                 UpdateText();
             }
         }
-
-        public Vector2 Position { get; set; } = Vector2.Zero;
-        public DisplayAnchor Anchor { get; set; }
-        public int ScaleFactor { get; set; } = 1;
-
+        
         public MusicTitleDisplayState State
         {
             get => state;
@@ -34,9 +32,6 @@ namespace DeltaTune.Display
             }
         }
 
-        public bool DisappearAutomatically { get; set; } = true;
-        public bool ShowPlaybackStatus { get; set; } = true;
-
         private const float AppearDelayLength = 0.5f;
         private const float AppearAnimationLength = 0.75f;
         private const float DisappearAnimationLength = 0.75f;
@@ -45,24 +40,39 @@ namespace DeltaTune.Display
         private const float SlideOutDistance = 24;
 
         private readonly BitmapFont font;
-        
+        private readonly ISettingsService settingsService;
+        private readonly Func<Vector2> windowSizeProvider;
+        private readonly Observable<Vector2> windowSize;
+
         private MediaInfo content;
         private MusicTitleDisplayState state = MusicTitleDisplayState.Hidden;
-
+        private Vector2 position = Vector2.Zero;
         private string text = string.Empty;
         private SizeF textSize;
         private Vector2 positionOffset;
         private float opacity;
         private double animationTimer;
         
-        public MusicTitleDisplay(BitmapFont font)
+        private readonly IDisposable windowSizeSubscription;
+        private readonly IDisposable scaleFactorSubscription;
+        private readonly IDisposable positionSubscription;
+        
+        public MusicTitleDisplay(BitmapFont font, ISettingsService settingsService, Func<Vector2> windowSizeProvider)
         {
             this.font = font;
+            this.settingsService = settingsService;
+            this.windowSizeProvider = windowSizeProvider;
+
+            windowSize = Observable.EveryValueChanged(this, display => display.windowSizeProvider.Invoke());
+            
+            windowSizeSubscription = windowSize.Subscribe(_ => UpdatePosition());
+            scaleFactorSubscription = settingsService.ScaleFactor.Subscribe(_ => UpdatePosition());
+            positionSubscription = settingsService.Position.Subscribe(_ => UpdatePosition());
         }
 
         public void Update(GameTime gameTime)
         {
-            float progress = 0f;
+            float progress;
             switch (State)
             {
                 case MusicTitleDisplayState.AppearingDelay:
@@ -84,7 +94,7 @@ namespace DeltaTune.Display
                     progress = (float)(animationTimer / AppearAnimationLength);
                     
                     opacity = MathHelper.Clamp(progress * 1.5f - 0.25f, 0, 1);
-                    positionOffset.X = InterpolateQuadratic(SlideInDistance * ScaleFactor, 0, progress);
+                    positionOffset.X = InterpolateQuadratic(SlideInDistance * settingsService.ScaleFactor.Value, 0, progress);
 
                     if (animationTimer >= AppearAnimationLength)
                     {
@@ -99,12 +109,12 @@ namespace DeltaTune.Display
                         positionOffset.X = 0;
                     }
 
-                    if (DisappearAutomatically && animationTimer >= StayTime)
+                    if (settingsService.HideAutomatically.Value && animationTimer >= StayTime)
                     {
                         State = MusicTitleDisplayState.Disappearing;
                     }
 
-                    if (!DisappearAutomatically && !ShowPlaybackStatus && animationTimer >= StayTime &&
+                    if (!settingsService.HideAutomatically.Value && !settingsService.ShowPlaybackStatus.Value && animationTimer >= StayTime &&
                         (content.Status == PlaybackStatus.Stopped || content.Status == PlaybackStatus.Paused))
                     {
                         State = MusicTitleDisplayState.Disappearing;
@@ -120,7 +130,7 @@ namespace DeltaTune.Display
                     
                     progress = (float)(animationTimer / DisappearAnimationLength);
                     opacity = 1 - progress;
-                    positionOffset.X = InterpolateQuadratic(-SlideOutDistance * ScaleFactor, 0, 1 - progress);
+                    positionOffset.X = InterpolateQuadratic(-SlideOutDistance * settingsService.ScaleFactor.Value, 0, 1 - progress);
                     
                     if (animationTimer >= DisappearAnimationLength)
                     {
@@ -139,16 +149,17 @@ namespace DeltaTune.Display
         {
             if (State != MusicTitleDisplayState.Hidden)
             {
-                Vector2 finalPosition = Position + positionOffset;
-                if (Anchor == DisplayAnchor.Right)
+                Vector2 finalPosition = position + positionOffset;
+                
+                if (settingsService.Position.Value.X > 0.5f)
                 {
-                    finalPosition.X -= textSize.Width;
+                    finalPosition.X -= textSize.Width * settingsService.ScaleFactor.Value;
                 }
                 
                 Color finalColor = Color.White;
                 finalColor.A = (byte)MathHelper.Clamp((int)Math.Round(opacity * 255), 0, 255);
                 
-                spriteBatch.DrawString(font, text, finalPosition, finalColor, 0, Vector2.Zero, ScaleFactor, SpriteEffects.None, 0);
+                spriteBatch.DrawString(font, text, finalPosition, finalColor, 0, Vector2.Zero, settingsService.ScaleFactor.Value, SpriteEffects.None, 0);
             }
         }
 
@@ -156,24 +167,41 @@ namespace DeltaTune.Display
         {
             if (State == MusicTitleDisplayState.Disappearing || State == MusicTitleDisplayState.Hidden) return;
             
-            if (ShowPlaybackStatus)
+            if (settingsService.ShowPlaybackStatus.Value)
             {
                 switch (Content.Status)
                 {
                     case PlaybackStatus.Playing:
-                        text = $"♪~   {Content.Artist} - {Content.Title}";
+                        text = $"♪~   {GetTextString()}";
                         break;
                     case PlaybackStatus.Paused:
-                        text = $"⏸~   {Content.Artist} - {Content.Title}";
+                        text = $"⏸~   {GetTextString()}";
                         break;
                 }
             }
             else
             {
-                text = $"♪~   {Content.Artist} - {Content.Title}";
+                text = $"♪~   {GetTextString()}";
             }
             
             textSize = font.MeasureString(text);
+        }
+
+        private string GetTextString()
+        {
+            if (settingsService.ShowArtistName.Value)
+            {
+                return $"{Content.Artist} - {Content.Title}";
+            }
+            else
+            {
+                return $"{Content.Title}";
+            }
+        }
+
+        private void UpdatePosition()
+        {
+            position.X = settingsService.Position.Value.X * windowSizeProvider().X;
         }
         
         private static float InterpolateQuadratic(float a, float b, float t)
@@ -182,6 +210,13 @@ namespace DeltaTune.Display
             float progress = 1 - oneMinusT * oneMinusT;
 
             return MathHelper.Lerp(a, b, progress);
+        }
+
+        public void Dispose()
+        {
+            windowSizeSubscription?.Dispose();
+            scaleFactorSubscription?.Dispose();
+            positionSubscription?.Dispose();
         }
     }
 }

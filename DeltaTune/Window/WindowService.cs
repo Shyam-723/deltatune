@@ -4,12 +4,13 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using DeltaTune.Settings;
 using Microsoft.Xna.Framework;
+using R3;
 using Point = Microsoft.Xna.Framework.Point;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
 
 namespace DeltaTune.Window
 {
-    public class WindowService : IWindowService
+    public class WindowService : IWindowService, IDisposable
     {
         [DllImport("user32.dll")]
         private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
@@ -35,13 +36,20 @@ namespace DeltaTune.Window
         private readonly GameWindow window;
         private readonly GraphicsDeviceManager graphicsDeviceManager;
         private readonly ISettingsMenu settingsMenu;
+        private readonly ISettingsService settingsService;
+        private readonly float lineHeight;
+        
+        private IDisposable scaleFactorSubscription;
+        private IDisposable windowSizeSubscription;
 
-        public WindowService(Game game, GraphicsDeviceManager graphicsDeviceManager, ISettingsMenu settingsMenu)
+        public WindowService(Game game, GraphicsDeviceManager graphicsDeviceManager, ISettingsMenu settingsMenu, ISettingsService settingsService, float lineHeight)
         {
             this.game = game;
             this.window = game.Window;
             this.graphicsDeviceManager = graphicsDeviceManager;
             this.settingsMenu = settingsMenu;
+            this.settingsService = settingsService;
+            this.lineHeight = lineHeight;
         }
 
         public void InitializeWindow()
@@ -65,22 +73,43 @@ namespace DeltaTune.Window
 
             SetWindowPos(window.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             
-            Rectangle currentScreenBounds = GetCurrentScreenBounds();
-            SetWindowSize(new Point(currentScreenBounds.Width, 17 * 4));
-            SetFractionalWindowPosition(new Vector2(0, 0));
+            SetWindowScale(settingsService.ScaleFactor.Value);
+            UpdateWindowPosition();
             
             CreateTrayIcon(windowHandle);
+            
+            scaleFactorSubscription = settingsService.ScaleFactor.Subscribe(scale =>
+            {
+                SetWindowScale(scale);
+                UpdateWindowPosition();
+            });
+            
+            windowSizeSubscription = settingsService.Position.Subscribe(_ => UpdateWindowPosition());
         }
 
-        public void SetFractionalWindowPosition(Vector2 fractionalPosition)
+        private void UpdateWindowPosition()
+        {
+            Vector2 fractionalPosition = settingsService.Position.Value;
+            Rectangle currentScreenBounds = GetCurrentScreenBounds();
+            Point windowPosition = new Point(
+                0,
+                (int)(currentScreenBounds.Height * fractionalPosition.Y)
+            );
+
+            if (fractionalPosition.Y > 0.5f)
+            {
+                windowPosition.Y -= (int)lineHeight * settingsService.ScaleFactor.Value;
+            }
+            
+            window.Position = windowPosition;
+        }
+
+        private void SetWindowScale(int scaleFactor)
         {
             Rectangle currentScreenBounds = GetCurrentScreenBounds();
-            window.Position = new Point(
-                (int)(currentScreenBounds.X * fractionalPosition.X) * Math.Sign(fractionalPosition.X - 0.5f) * -1,
-                (int)(currentScreenBounds.Y * fractionalPosition.Y) * Math.Sign(fractionalPosition.Y - 0.5f) * -1
-            );
+            SetWindowSize(new Point(currentScreenBounds.Width, (int)lineHeight * scaleFactor));
         }
-
+        
         private Rectangle GetCurrentScreenBounds()
         {
             System.Drawing.Rectangle boundsSystemType = Screen.FromHandle(window.Handle).Bounds;
@@ -114,6 +143,12 @@ namespace DeltaTune.Window
                     settingsMenu.Show();
                 }
             };
+        }
+
+        public void Dispose()
+        {
+            scaleFactorSubscription?.Dispose();
+            windowSizeSubscription?.Dispose();
         }
     }
 }

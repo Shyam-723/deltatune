@@ -5,15 +5,15 @@ using Windows.Media.Control;
 
 namespace DeltaTune.Media
 {
-    public class SystemMediaInfoProvider : IMediaInfoProvider, IDisposable
+    public class SystemMediaInfoService : IMediaInfoService, IDisposable
     {
         public ConcurrentQueue<MediaInfo> UpdateQueue { get; }
+        
         private GlobalSystemMediaTransportControlsSessionManager currentSessionManager;
         private GlobalSystemMediaTransportControlsSession currentSession;
-        
         private MediaInfo lastMediaInfo;
         
-        public SystemMediaInfoProvider()
+        public SystemMediaInfoService()
         {
             UpdateQueue = new ConcurrentQueue<MediaInfo>();
             

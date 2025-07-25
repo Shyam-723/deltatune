@@ -5,9 +5,8 @@ namespace DeltaTune.Display
 {
     public interface IDisplayService
     {
-        void LoadContent();
         void BeginRun();
         void Update(GameTime gameTime);
-        void Draw(GameTime gameTime);
+        void Draw(SpriteBatch spriteBatch, GameTime gameTime);
     }
 }

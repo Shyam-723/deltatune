@@ -4,6 +4,8 @@ using DeltaTune.Settings;
 using DeltaTune.Window;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended.BitmapFonts;
+using R3;
 
 namespace DeltaTune
 {
@@ -11,9 +13,14 @@ namespace DeltaTune
     {
         private GraphicsDeviceManager graphicsDeviceManagerInstance;
         private IWindowService windowService;
-        private IMediaInfoProvider mediaInfoProvider;
+        private IMediaInfoService mediaInfoService;
         private IDisplayService displayService;
         private ISettingsMenu settingsMenu;
+        private ISettingsService settingsService;
+        private ISettingsFile settingsFile;
+
+        private SpriteBatch spriteBatch;
+        private BitmapFont musicTitleFont;
         
         public DeltaTune()
         {
@@ -25,29 +32,40 @@ namespace DeltaTune
             };
             
             Content.RootDirectory = "Content";
+            
+            ObservableSystemComponent observableSystemComponent = new ObservableSystemComponent(this);
+            Components.Add(observableSystemComponent);
         }
 
         protected override void Initialize()
         { 
-            settingsMenu = new SettingsMenu();
-            windowService = new WindowService(this, graphicsDeviceManagerInstance, settingsMenu);
-            mediaInfoProvider = new SystemMediaInfoProvider();
-            displayService = new DisplayService(mediaInfoProvider, GraphicsDevice);
+            settingsService = new SettingsService();
+            settingsFile = new SettingsFile(settingsService, "Settings.json");
+            settingsMenu = new SettingsMenu(settingsService);
+            settingsFile.Load();
             
-            windowService.InitializeWindow();
+            mediaInfoService = new SystemMediaInfoService();
             
             base.Initialize();
         }
 
         protected override void LoadContent()
         {
-            displayService.LoadContent();
+            musicTitleFont = BitmapFont.FromFile(GraphicsDevice, "Content/Fonts/MusicTitleFont.fnt");
+            musicTitleFont.FallbackCharacter = '▯';
+            
+            spriteBatch = new SpriteBatch(GraphicsDevice);
             
             base.LoadContent();
         }
 
         protected override void BeginRun()
         {
+            windowService = new WindowService(this, graphicsDeviceManagerInstance, settingsMenu, settingsService, musicTitleFont.LineHeight);
+            windowService.InitializeWindow();
+
+            Vector2 WindowSizeProvider() => new Vector2(graphicsDeviceManagerInstance.GraphicsDevice.Viewport.Width, graphicsDeviceManagerInstance.GraphicsDevice.Viewport.Height);
+            displayService = new DisplayService(mediaInfoService, settingsService, musicTitleFont, WindowSizeProvider);
             displayService.BeginRun();
             
             base.BeginRun();
@@ -63,7 +81,7 @@ namespace DeltaTune
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.Transparent);
-            displayService.Draw(gameTime);
+            displayService.Draw(spriteBatch, gameTime);
             
             base.Draw(gameTime);
         }

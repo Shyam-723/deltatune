@@ -1,8 +1,5 @@
 using System;
-using System.IO;
-using System.Reflection;
 using Microsoft.Xna.Framework.Content;
-using Microsoft.Xna.Framework.Graphics;
 
 namespace MonoGame.Extended.Content
 {

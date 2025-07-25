@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 
 namespace DeltaTune.Media
 {
-    public interface IMediaInfoProvider
+    public interface IMediaInfoService
     {
         ConcurrentQueue<MediaInfo> UpdateQueue { get; }
         bool IsCurrentlyStopped();
