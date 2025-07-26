@@ -7,8 +7,8 @@ namespace DeltaTune.Settings
     {
         ReactiveProperty<int> ScaleFactor { get; }
         ReactiveProperty<Vector2> Position { get; }
-        ReactiveProperty<bool> HideAutomatically { get; }
-        ReactiveProperty<bool> ShowPlaybackStatus { get; }
         ReactiveProperty<bool> ShowArtistName { get; }
+        ReactiveProperty<bool> ShowPlaybackStatus { get; }
+        ReactiveProperty<bool> HideAutomatically { get; }
     }
 }

@@ -112,7 +112,7 @@ namespace DeltaTune.Window
         
         private Rectangle GetCurrentScreenBounds()
         {
-            System.Drawing.Rectangle boundsSystemType = Screen.FromHandle(window.Handle).Bounds;
+            System.Drawing.Rectangle boundsSystemType = Screen.FromHandle(window.Handle).WorkingArea;
             return new Rectangle(boundsSystemType.X, boundsSystemType.Y, boundsSystemType.Width, boundsSystemType.Height);
         }
 
@@ -129,20 +129,13 @@ namespace DeltaTune.Window
             Icon icon = form.Icon;
             NotifyIcon notifyIcon = new NotifyIcon();
             notifyIcon.Icon = icon;
-            notifyIcon.Text = "Right-click to open the settings menu";
+            notifyIcon.Text = "DeltaTune";
             notifyIcon.Visible = true;
+            notifyIcon.ContextMenuStrip = settingsMenu.GetSettingsMenu();
 
             notifyIcon.BalloonTipTitle = "DeltaTune is now running!";
-            notifyIcon.BalloonTipText = "Play some music to get started or click the DeltaTune icon in your system tray for customization options.";
+            notifyIcon.BalloonTipText = "Play some music to get started or right-click the DeltaTune icon in your system tray for customization options.";
             notifyIcon.ShowBalloonTip(1000);
-
-            notifyIcon.MouseClick += (sender, args) =>
-            {
-                if (args.Button == MouseButtons.Left || args.Button == MouseButtons.Right)
-                {
-                    settingsMenu.Show();
-                }
-            };
         }
 
         public void Dispose()

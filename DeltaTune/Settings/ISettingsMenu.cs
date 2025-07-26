@@ -1,7 +1,9 @@
+using System.Windows.Forms;
+
 namespace DeltaTune.Settings
 {
     public interface ISettingsMenu
     {
-        void Show();
+        ContextMenuStrip GetSettingsMenu();
     }
 }

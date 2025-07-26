@@ -34,6 +34,7 @@ namespace DeltaTune
             Content.RootDirectory = "Content";
             
             ObservableSystemComponent observableSystemComponent = new ObservableSystemComponent(this);
+            observableSystemComponent.Initialize();
             Components.Add(observableSystemComponent);
         }
 
@@ -42,7 +43,6 @@ namespace DeltaTune
             settingsService = new SettingsService();
             settingsFile = new SettingsFile(settingsService, "Settings.json");
             settingsMenu = new SettingsMenu(settingsService);
-            settingsFile.Load();
             
             mediaInfoService = new SystemMediaInfoService();
             

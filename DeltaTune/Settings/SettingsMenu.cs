@@ -12,25 +12,41 @@ namespace DeltaTune.Settings
             this.settingsService = settingsService;
         }
 
-        public void Show()
+        public ContextMenuStrip GetSettingsMenu()
         {
-            settingsMenuStrip?.Hide();
-            
             settingsMenuStrip = new ContextMenuStrip();
             settingsMenuStrip.AutoClose = true;
             settingsMenuStrip.TopLevel = true;
+
+            settingsMenuStrip.Opening += (sender, args) =>
+            {
+                settingsMenuStrip.Items.Clear();
+                
+                ToolStripMenuItem headingItem = new ToolStripMenuItem();
+                headingItem.Text = "DeltaTune";
+                headingItem.Enabled = false;
+                settingsMenuStrip.Items.Add(headingItem);
             
-            ToolStripMenuItem headingItem = new ToolStripMenuItem();
-            headingItem.Text = "DeltaTune";
-            headingItem.Enabled = false;
-            settingsMenuStrip.Items.Add(headingItem);
+                settingsMenuStrip.Items.Add(new ToolStripSeparator());
             
-            settingsMenuStrip.Items.Add(new ToolStripSeparator());
+                settingsMenuStrip.Items.Add(GetPositionMenuItem());
+                settingsMenuStrip.Items.Add(GetScaleMenuItem());
+                settingsMenuStrip.Items.Add(GetBehaviorMenuItem());
+                
+                settingsMenuStrip.Items.Add(new ToolStripSeparator());
+                
+                ToolStripMenuItem aboutItem = new ToolStripMenuItem();
+                aboutItem.Text = "About...";
+                aboutItem.Click += (o, eventArgs) => ShowAboutScreen();
+                settingsMenuStrip.Items.Add(aboutItem);
+
+                ToolStripMenuItem quitItem = new ToolStripMenuItem();
+                quitItem.Text = "Quit";
+                quitItem.Click += (o, eventArgs) => Application.Exit();
+                settingsMenuStrip.Items.Add(quitItem);
+            };
             
-            settingsMenuStrip.Items.Add(GetPositionMenuItem());
-            settingsMenuStrip.Items.Add(GetScaleMenuItem());
-            
-            settingsMenuStrip.Show(Cursor.Position);
+            return settingsMenuStrip;
         }
 
         private ToolStripMenuItem GetPositionMenuItem()
@@ -68,7 +84,7 @@ namespace DeltaTune.Settings
         private ToolStripMenuItem GetScaleMenuItem()
         {
             ToolStripMenuItem scaleItem = new ToolStripMenuItem();
-            scaleItem.Text = "Scale";
+            scaleItem.Text = "Size";
 
             for (int i = 1; i < 9; i++)
             {
@@ -82,6 +98,37 @@ namespace DeltaTune.Settings
             }
             
             return scaleItem;
+        }
+
+        private ToolStripMenuItem GetBehaviorMenuItem()
+        {
+            ToolStripMenuItem behaviorItem = new ToolStripMenuItem();
+            behaviorItem.Text = "Behavior";
+            
+            ToolStripMenuItem showArtistNameItem = new ToolStripMenuItem();
+            showArtistNameItem.Text = "Show Artist Name";
+            showArtistNameItem.Checked = settingsService.ShowArtistName.Value;
+            showArtistNameItem.Click += (sender, args) => settingsService.ShowArtistName.Value = !settingsService.ShowArtistName.Value;
+            behaviorItem.DropDownItems.Add(showArtistNameItem);
+            
+            ToolStripMenuItem showPlaybackStatusItem = new ToolStripMenuItem();
+            showPlaybackStatusItem.Text = "Show Playback Status";
+            showPlaybackStatusItem.Checked = settingsService.ShowPlaybackStatus.Value;
+            showPlaybackStatusItem.Click += (sender, args) => settingsService.ShowPlaybackStatus.Value = !settingsService.ShowPlaybackStatus.Value;
+            behaviorItem.DropDownItems.Add(showPlaybackStatusItem);
+            
+            ToolStripMenuItem hideAutomaticallyItem = new ToolStripMenuItem();
+            hideAutomaticallyItem.Text = "Hide Automatically";
+            hideAutomaticallyItem.Checked = settingsService.HideAutomatically.Value;
+            hideAutomaticallyItem.Click += (sender, args) => settingsService.HideAutomatically.Value = !settingsService.HideAutomatically.Value;
+            behaviorItem.DropDownItems.Add(hideAutomaticallyItem);
+            
+            return behaviorItem;
+        }
+        
+        private void ShowAboutScreen()
+        {
+            MessageBox.Show($"{ProgramInfo.Name} {ProgramInfo.Version}{ProgramInfo.VersionSuffix}\nCreated by {ProgramInfo.Author}\n\n{ProgramInfo.Credits}\n\n{ProgramInfo.Disclaimer}", ProgramInfo.Name, MessageBoxButtons.OK, MessageBoxIcon.None);
         }
     }
 }

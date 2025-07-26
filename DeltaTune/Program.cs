@@ -2,11 +2,18 @@
 {
     public static class Program
     {
+        private static SingleInstance singleInstance = new SingleInstance(ProgramInfo.Name);
+        
         public static void Main(string[] args)
         {
-            using (var game = new DeltaTune())
+            using (singleInstance)
             {
-                game.Run();
+                if(singleInstance.IsRunning) return;
+                
+                using (var game = new DeltaTune())
+                {
+                    game.Run();
+                }
             }
         }
     }
