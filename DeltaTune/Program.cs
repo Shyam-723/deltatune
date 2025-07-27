@@ -1,4 +1,6 @@
-﻿namespace DeltaTune
+﻿using System.Windows.Forms;
+
+namespace DeltaTune
 {
     public static class Program
     {
@@ -8,7 +10,11 @@
         {
             using (singleInstance)
             {
-                if(singleInstance.IsRunning) return;
+                if (singleInstance.IsRunning)
+                {
+                    MessageBox.Show("Another instance of DeltaTune is already running.\nTo close it, right-click the DeltaTune icon in your system tray and choose \"Quit\".", ProgramInfo.Name, MessageBoxButtons.OK);
+                    return;
+                }
                 
                 using (var game = new DeltaTune())
                 {
