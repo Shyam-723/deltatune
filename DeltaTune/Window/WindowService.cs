@@ -38,9 +38,11 @@ namespace DeltaTune.Window
         private readonly ISettingsMenu settingsMenu;
         private readonly ISettingsService settingsService;
         private readonly float lineHeight;
-        
+
+        private NotifyIcon trayIcon;
         private IDisposable scaleFactorSubscription;
         private IDisposable windowSizeSubscription;
+        private IDisposable windowTopmostIntervalSubscription;
 
         public WindowService(Game game, GraphicsDeviceManager graphicsDeviceManager, ISettingsMenu settingsMenu, ISettingsService settingsService, float lineHeight)
         {
@@ -71,7 +73,7 @@ namespace DeltaTune.Window
             int[] margins = { -1 };
             DwmExtendFrameIntoClientArea(window.Handle, ref margins);
 
-            SetWindowPos(window.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            MakeTopmostWindow();
             
             SetWindowScale(settingsService.ScaleFactor.Value);
             UpdateWindowPosition();
@@ -85,6 +87,19 @@ namespace DeltaTune.Window
             });
             
             windowSizeSubscription = settingsService.Position.Subscribe(_ => UpdateWindowPosition());
+
+            windowTopmostIntervalSubscription = Observable.Interval(TimeSpan.FromSeconds(0.05)).Subscribe(_ =>
+            {
+                if (!trayIcon.ContextMenuStrip.Visible)
+                {
+                    MakeTopmostWindow();
+                }
+            });
+        }
+
+        private void MakeTopmostWindow()
+        {
+            SetWindowPos(window.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
         }
 
         private void UpdateWindowPosition()
@@ -127,21 +142,22 @@ namespace DeltaTune.Window
         {
             Form form = (Form)Control.FromHandle(windowHandle);
             Icon icon = form.Icon;
-            NotifyIcon notifyIcon = new NotifyIcon();
-            notifyIcon.Icon = icon;
-            notifyIcon.Text = "DeltaTune";
-            notifyIcon.Visible = true;
-            notifyIcon.ContextMenuStrip = settingsMenu.GetSettingsMenu();
+            trayIcon = new NotifyIcon();
+            trayIcon.Icon = icon;
+            trayIcon.Text = "DeltaTune";
+            trayIcon.Visible = true;
+            trayIcon.ContextMenuStrip = settingsMenu.GetSettingsMenu();
 
-            notifyIcon.BalloonTipTitle = "DeltaTune is now running!";
-            notifyIcon.BalloonTipText = "Play some music to get started or right-click the DeltaTune icon in your system tray for customization options.";
-            notifyIcon.ShowBalloonTip(1000);
+            trayIcon.BalloonTipTitle = "DeltaTune is now running!";
+            trayIcon.BalloonTipText = "Play some music to get started or right-click the DeltaTune icon in your system tray for customization options.";
+            trayIcon.ShowBalloonTip(1000);
         }
 
         public void Dispose()
         {
             scaleFactorSubscription?.Dispose();
             windowSizeSubscription?.Dispose();
+            windowTopmostIntervalSubscription?.Dispose();
         }
     }
 }

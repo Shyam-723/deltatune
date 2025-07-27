@@ -129,7 +129,7 @@ namespace DeltaTune.Display
                     }
                     
                     progress = (float)(animationTimer / DisappearAnimationLength);
-                    opacity = 1 - progress;
+                    opacity = MathHelper.Clamp((1 - progress) * 1.5f - 0.25f, 0, 1);
                     positionOffset.X = InterpolateQuadratic(-SlideOutDistance * settingsService.ScaleFactor.Value, 0, 1 - progress);
                     
                     if (animationTimer >= DisappearAnimationLength)
@@ -147,7 +147,7 @@ namespace DeltaTune.Display
 
         public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
         {
-            if (State != MusicTitleDisplayState.Hidden)
+            if (State != MusicTitleDisplayState.Hidden && State != MusicTitleDisplayState.AppearingDelay)
             {
                 Vector2 finalPosition = position + positionOffset;
                 
