@@ -81,7 +81,9 @@ namespace DeltaTune
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.Transparent);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied, SamplerState.PointClamp);
             displayService.Draw(spriteBatch, gameTime);
+            spriteBatch.End();
             
             base.Draw(gameTime);
         }

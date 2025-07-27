@@ -125,10 +125,8 @@ namespace DeltaTune.Display
         
         public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
         {
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
             primaryDisplay.Draw(spriteBatch, gameTime);
             secondaryDisplay.Draw(spriteBatch, gameTime);
-            spriteBatch.End();
         }
         
         private void SwapAndShowPrimaryDisplay()
