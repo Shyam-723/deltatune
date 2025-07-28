@@ -35,7 +35,7 @@ namespace DeltaTune.Display
         private const float AppearDelayLength = 0.5f;
         private const float AppearAnimationLength = 0.75f;
         private const float DisappearAnimationLength = 0.75f;
-        private const float StayTime = 2f;
+        private const float StayTime = 2.5f;
         private const float SlideInDistance = 24;
         private const float SlideOutDistance = 24;
 

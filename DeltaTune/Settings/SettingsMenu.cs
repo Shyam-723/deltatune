@@ -77,6 +77,12 @@ namespace DeltaTune.Settings
             bottomRightItem.Checked = PositionPresetHelper.GetFractionalPosition(PositionPreset.BottomRight) == settingsService.Position.Value;
             bottomRightItem.Click += (sender, args) => settingsService.Position.Value = PositionPresetHelper.GetFractionalPosition(PositionPreset.BottomRight);
             positionItem.DropDownItems.Add(bottomRightItem);
+            
+            ToolStripMenuItem originalItem = new ToolStripMenuItem();
+            originalItem.Text = "Original";
+            originalItem.Checked = PositionPresetHelper.GetFractionalPosition(PositionPreset.Original) == settingsService.Position.Value;
+            originalItem.Click += (sender, args) => settingsService.Position.Value = PositionPresetHelper.GetFractionalPosition(PositionPreset.Original);
+            positionItem.DropDownItems.Add(originalItem);
 
             return positionItem;
         }

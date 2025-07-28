@@ -5,7 +5,7 @@ namespace DeltaTune.Settings
 {
     public class PositionPresetHelper
     {
-        private static readonly Vector2[] presetPositions = new Vector2[4];
+        private static readonly Vector2[] presetPositions = new Vector2[5];
 
         static PositionPresetHelper()
         {
@@ -13,6 +13,7 @@ namespace DeltaTune.Settings
             presetPositions[(int)PositionPreset.TopRight] = new Vector2(0.975f, 0.025f);
             presetPositions[(int)PositionPreset.BottomLeft] = new Vector2(0.025f, 0.975f);
             presetPositions[(int)PositionPreset.BottomRight] = new Vector2(0.975f, 0.975f);
+            presetPositions[(int)PositionPreset.Original] = new Vector2(0.95f, 0.22f);
         }
 
         public static Vector2 GetFractionalPosition(PositionPreset preset)
@@ -26,6 +27,7 @@ namespace DeltaTune.Settings
             if(preset == presetPositions[(int)PositionPreset.TopRight]) return PositionPreset.TopRight;
             if(preset == presetPositions[(int)PositionPreset.BottomLeft]) return PositionPreset.BottomLeft;
             if(preset == presetPositions[(int)PositionPreset.BottomRight]) return PositionPreset.BottomRight;
+            if(preset == presetPositions[(int)PositionPreset.Original]) return PositionPreset.Original;
             
             throw new ArgumentOutOfRangeException(nameof(preset));
         }

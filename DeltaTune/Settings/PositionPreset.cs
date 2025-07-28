@@ -5,6 +5,7 @@ namespace DeltaTune.Settings
         TopLeft,
         TopRight,
         BottomLeft,
-        BottomRight
+        BottomRight,
+        Original
     }
 }
