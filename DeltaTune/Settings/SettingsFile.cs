@@ -73,7 +73,6 @@ namespace DeltaTune.Settings
                 else
                 {
                     fileStream = File.Create(filePath);
-                    File.SetAttributes(filePath, File.GetAttributes(filePath) | FileAttributes.Hidden);
                 }
 
                 SettingsFileModel fileModel = new SettingsFileModel();
