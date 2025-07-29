@@ -5,6 +5,7 @@ namespace DeltaTune.Settings
 {
     public class SettingsService : ISettingsService
     {
+        public bool IsFactorySettings { get; set; } = true;
         public ReactiveProperty<int> ScaleFactor { get; } = new ReactiveProperty<int>(3);
         public ReactiveProperty<Vector2> Position { get; } = new ReactiveProperty<Vector2>(PositionPresetHelper.GetFractionalPosition(PositionPreset.TopRight));
         public ReactiveProperty<bool> ShowArtistName { get; } =  new ReactiveProperty<bool>(true);

@@ -5,8 +5,10 @@ using System.Windows.Forms;
 using DeltaTune.Settings;
 using Microsoft.Xna.Framework;
 using R3;
+using SharpDX;
 using Point = Microsoft.Xna.Framework.Point;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
 
 namespace DeltaTune.Window
 {
@@ -95,6 +97,11 @@ namespace DeltaTune.Window
                     MakeTopmostWindow();
                 }
             });
+
+            if (settingsService.IsFactorySettings)
+            {
+                settingsService.ScaleFactor.Value = GetRecommendedScale();
+            }
         }
 
         private void MakeTopmostWindow()
@@ -129,6 +136,12 @@ namespace DeltaTune.Window
         {
             System.Drawing.Rectangle boundsSystemType = Screen.FromHandle(window.Handle).WorkingArea;
             return new Rectangle(boundsSystemType.X, boundsSystemType.Y, boundsSystemType.Width, boundsSystemType.Height);
+        }
+        
+        private int GetRecommendedScale()
+        {
+            System.Drawing.Rectangle bounds = Screen.FromHandle(window.Handle).WorkingArea;
+            return MathUtil.Clamp((int)Math.Ceiling(bounds.Width / 960f) + 1, 1, 8);
         }
 
         private void SetWindowSize(Point size)

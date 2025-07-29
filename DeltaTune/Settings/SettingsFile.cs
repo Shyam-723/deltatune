@@ -45,6 +45,7 @@ namespace DeltaTune.Settings
                     string serialized = File.ReadAllText(filePath);
                     SettingsFileModel fileModel = JsonConvert.DeserializeObject<SettingsFileModel>(serialized);
                     fileModel.ToSettings(settingsService);
+                    settingsService.IsFactorySettings = false;
                 }
             }
             catch (Exception e)
@@ -62,6 +63,8 @@ namespace DeltaTune.Settings
         private void Save()
         {
             if(disableSaving) return;
+            
+            settingsService.IsFactorySettings = false;
             
             FileStream fileStream = null;
             try
