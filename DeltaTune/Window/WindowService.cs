@@ -31,6 +31,7 @@ namespace DeltaTune.Window
         private const int WS_EX_TOOLWINDOW = 0x00000080;
         private const int WS_EX_APPWINDOW = 0x00040000;
         private static readonly IntPtr HWND_TOPMOST = (IntPtr)(-1);
+        private static readonly IntPtr HWND_NOTOPMOST = (IntPtr)(-2);
         private const int SWP_NOMOVE = 0x0002;
         private const int SWP_NOSIZE = 0x0001;
         
@@ -109,10 +110,12 @@ namespace DeltaTune.Window
                     UpdateGameRefreshRate();
                 }
             }).AddTo(ref disposableBuilder);
+            
+            settingsService.ScreenCaptureCompatibilityMode.Subscribe(SetScreenCaptureCompatibilityMode).AddTo(ref disposableBuilder);
 
             Observable.Interval(TimeSpan.FromSeconds(0.05)).Subscribe(_ =>
             {
-                if (!trayIcon.ContextMenuStrip.Visible)
+                if (!trayIcon.ContextMenuStrip.Visible && !settingsService.ScreenCaptureCompatibilityMode.Value)
                 {
                     MakeTopmostWindow();
                 }
@@ -204,6 +207,21 @@ namespace DeltaTune.Window
             trayIcon.BalloonTipTitle = "DeltaTune is now running!";
             trayIcon.BalloonTipText = "Play some music to get started or right-click the DeltaTune icon in your system tray for customization options.";
             trayIcon.ShowBalloonTip(1000);
+        }
+
+        private void SetScreenCaptureCompatibilityMode(bool enabled)
+        {
+            if (enabled)
+            {
+                SetWindowLong(window.Handle, GWL_EXSTYLE, WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_APPWINDOW);
+                SetWindowPos(window.Handle, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            }
+            else
+            {
+                SetWindowLong(window.Handle, GWL_EXSTYLE, WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW);
+                SetWindowPos(window.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                UpdateWindowPosition();
+            }
         }
 
         public void Dispose()

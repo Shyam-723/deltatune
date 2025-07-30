@@ -12,5 +12,6 @@ namespace DeltaTune.Settings
         public ReactiveProperty<bool> ShowArtistName { get; } =  new ReactiveProperty<bool>(true);
         public ReactiveProperty<bool> ShowPlaybackStatus { get; } = new ReactiveProperty<bool>(false);
         public ReactiveProperty<bool> HideAutomatically { get; } = new ReactiveProperty<bool>(true);
+        public ReactiveProperty<bool> ScreenCaptureCompatibilityMode { get; } = new ReactiveProperty<bool>(false);
     }
 }

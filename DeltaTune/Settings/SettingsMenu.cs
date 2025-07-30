@@ -156,6 +156,29 @@ namespace DeltaTune.Settings
             hideAutomaticallyItem.Click += (sender, args) => settingsService.HideAutomatically.Value = !settingsService.HideAutomatically.Value;
             behaviorItem.DropDownItems.Add(hideAutomaticallyItem);
             
+            ToolStripMenuItem screenCaptureCompatItem = new ToolStripMenuItem();
+            screenCaptureCompatItem.Text = "Streamer Mode";
+            screenCaptureCompatItem.Checked = settingsService.ScreenCaptureCompatibilityMode.Value;
+            screenCaptureCompatItem.Click += (sender, args) =>
+            {
+                if (!settingsService.ScreenCaptureCompatibilityMode.Value)
+                {
+                    DialogResult result = MessageBox.Show($"Streamer Mode improves DeltaTune's compatibility with screen capture software by making it usable with window capturing and allowing its window to disappear behind others.\n" +
+                                                          $"It is not intended for normal use outside of this purpose.\n\n" +
+                                                          $"Do you want to enable it?", ProgramInfo.Name, MessageBoxButtons.YesNo, MessageBoxIcon.None);
+                
+                    if (result == DialogResult.Yes)
+                    {
+                        settingsService.ScreenCaptureCompatibilityMode.Value = !settingsService.ScreenCaptureCompatibilityMode.Value;
+                    } 
+                }
+                else
+                {
+                    settingsService.ScreenCaptureCompatibilityMode.Value = !settingsService.ScreenCaptureCompatibilityMode.Value;
+                }
+            };
+            behaviorItem.DropDownItems.Add(screenCaptureCompatItem);
+            
             return behaviorItem;
         }
         
