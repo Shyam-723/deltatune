@@ -24,6 +24,7 @@ namespace DeltaTune.Settings
             var valueChangeDisposableBuilder = Disposable.CreateBuilder();
             settingsService.ScaleFactor.Subscribe(scale => saveEvent.OnNext(Unit.Default)).AddTo(ref valueChangeDisposableBuilder);
             settingsService.Position.Subscribe(pos => saveEvent.OnNext(Unit.Default)).AddTo(ref valueChangeDisposableBuilder);
+            settingsService.ScreenName.Subscribe(pos => saveEvent.OnNext(Unit.Default)).AddTo(ref valueChangeDisposableBuilder);
             settingsService.ShowArtistName.Subscribe(state => saveEvent.OnNext(Unit.Default)).AddTo(ref valueChangeDisposableBuilder);
             settingsService.ShowPlaybackStatus.Subscribe(state => saveEvent.OnNext(Unit.Default)).AddTo(ref valueChangeDisposableBuilder);
             settingsService.HideAutomatically.Subscribe(state => saveEvent.OnNext(Unit.Default)).AddTo(ref valueChangeDisposableBuilder);

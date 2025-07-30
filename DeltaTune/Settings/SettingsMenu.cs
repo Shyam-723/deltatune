@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Windows.Forms;
+using DeltaTune.Window;
 
 namespace DeltaTune.Settings
 {
@@ -53,6 +55,31 @@ namespace DeltaTune.Settings
         {
             ToolStripMenuItem positionItem = new ToolStripMenuItem();
             positionItem.Text = "Position";
+
+            IDictionary<string, string> screenNameMappings = ScreenFriendlyNameProvider.GetAllMonitorsFriendlyNames();
+            if (screenNameMappings.Count > 1)
+            {
+                ToolStripMenuItem headingItem1 = new ToolStripMenuItem();
+                headingItem1.Text = "Screen";
+                headingItem1.Enabled = false;
+                positionItem.DropDownItems.Add(headingItem1);
+                
+                foreach (KeyValuePair<string, string> screenNameMapping in screenNameMappings)
+                {
+                    ToolStripMenuItem screenItem = new ToolStripMenuItem();
+                    screenItem.Text = screenNameMapping.Value;
+                    screenItem.Checked = screenNameMapping.Key == settingsService.ScreenName.Value;
+                    screenItem.Click += (sender, args) => settingsService.ScreenName.Value = screenNameMapping.Key;
+                    positionItem.DropDownItems.Add(screenItem);
+                }
+                
+                positionItem.DropDownItems.Add(new ToolStripSeparator());
+                
+                ToolStripMenuItem headingItem2 = new ToolStripMenuItem();
+                headingItem2.Text = "Location";
+                headingItem2.Enabled = false;
+                positionItem.DropDownItems.Add(headingItem2);
+            }
             
             ToolStripMenuItem topLeftItem = new ToolStripMenuItem();
             topLeftItem.Text = "Top Left";

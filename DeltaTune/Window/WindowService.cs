@@ -41,10 +41,9 @@ namespace DeltaTune.Window
         private readonly ISettingsService settingsService;
         private readonly float lineHeight;
 
+        private Screen currentScreen;
         private NotifyIcon trayIcon;
-        private IDisposable scaleFactorSubscription;
-        private IDisposable windowSizeSubscription;
-        private IDisposable windowTopmostIntervalSubscription;
+        private IDisposable subscriptions;
 
         public WindowService(Game game, GraphicsDeviceManager graphicsDeviceManager, ISettingsMenu settingsMenu, ISettingsService settingsService, float lineHeight)
         {
@@ -62,7 +61,6 @@ namespace DeltaTune.Window
             
             game.IsMouseVisible = true;
             game.IsFixedTimeStep = true;
-            game.TargetElapsedTime = TimeSpan.FromTicks(TimeSpan.TicksPerSecond / ScreenRefreshRateProvider.GetScreenRefreshRate(windowHandle, 60));
             game.InactiveSleepTime = TimeSpan.Zero;
             graphicsDeviceManager.SynchronizeWithVerticalRetrace = true;
 
@@ -75,33 +73,70 @@ namespace DeltaTune.Window
             int[] margins = { -1 };
             DwmExtendFrameIntoClientArea(window.Handle, ref margins);
 
-            MakeTopmostWindow();
+            currentScreen = GetScreenByName(settingsService.ScreenName.Value);
+            if (currentScreen == null)
+            {
+                currentScreen = Screen.PrimaryScreen;
+                settingsService.ScreenName.Value = currentScreen.DeviceName;
+            }
             
-            SetWindowScale(settingsService.ScaleFactor.Value);
+            MakeTopmostWindow();
             UpdateWindowPosition();
+            UpdateWindowScale(settingsService.ScaleFactor.Value);
+            UpdateGameRefreshRate();
             
             CreateTrayIcon(windowHandle);
             
-            scaleFactorSubscription = settingsService.ScaleFactor.Subscribe(scale =>
-            {
-                SetWindowScale(scale);
-                UpdateWindowPosition();
-            });
+            var disposableBuilder = Disposable.CreateBuilder();
             
-            windowSizeSubscription = settingsService.Position.Subscribe(_ => UpdateWindowPosition());
+            settingsService.ScaleFactor.Subscribe(scale =>
+            {
+                UpdateWindowScale(scale);
+                UpdateWindowPosition();
+            }).AddTo(ref disposableBuilder);
+            
+            settingsService.Position.Subscribe(_ => UpdateWindowPosition()).AddTo(ref disposableBuilder);
+            
+            settingsService.ScreenName.Subscribe(screenName =>
+            {
+                var screen = GetScreenByName(screenName);
+                if (screen != null)
+                {
+                    currentScreen = screen;
+                    
+                    UpdateWindowPosition();
+                    UpdateWindowScale(settingsService.ScaleFactor.Value);
+                    UpdateGameRefreshRate();
+                }
+            }).AddTo(ref disposableBuilder);
 
-            windowTopmostIntervalSubscription = Observable.Interval(TimeSpan.FromSeconds(0.05)).Subscribe(_ =>
+            Observable.Interval(TimeSpan.FromSeconds(0.05)).Subscribe(_ =>
             {
                 if (!trayIcon.ContextMenuStrip.Visible)
                 {
                     MakeTopmostWindow();
                 }
-            });
+            }).AddTo(ref disposableBuilder);
+            
+            subscriptions = disposableBuilder.Build();
 
             if (settingsService.IsFactorySettings)
             {
                 settingsService.ScaleFactor.Value = GetRecommendedScale();
             }
+        }
+
+        private Screen GetScreenByName(string deviceName)
+        {
+            Screen[] screens = Screen.AllScreens;
+            Screen match = null;
+
+            foreach (Screen screen in screens)
+            {
+                if(screen.DeviceName == deviceName) match = screen;
+            }
+            
+            return match;
         }
 
         private void MakeTopmostWindow()
@@ -114,8 +149,8 @@ namespace DeltaTune.Window
             Vector2 fractionalPosition = settingsService.Position.Value;
             Rectangle currentScreenBounds = GetCurrentScreenBounds();
             Point windowPosition = new Point(
-                0,
-                (int)(currentScreenBounds.Height * fractionalPosition.Y)
+                currentScreenBounds.X,
+                currentScreenBounds.Y + (int)(currentScreenBounds.Height * fractionalPosition.Y)
             );
 
             if (fractionalPosition.Y > 0.5f)
@@ -126,7 +161,12 @@ namespace DeltaTune.Window
             window.Position = windowPosition;
         }
 
-        private void SetWindowScale(int scaleFactor)
+        private void UpdateGameRefreshRate()
+        {
+            game.TargetElapsedTime = TimeSpan.FromTicks(TimeSpan.TicksPerSecond / ScreenRefreshRateProvider.GetScreenRefreshRate(window.Handle, 60));
+        }
+
+        private void UpdateWindowScale(int scaleFactor)
         {
             Rectangle currentScreenBounds = GetCurrentScreenBounds();
             SetWindowSize(new Point(currentScreenBounds.Width, (int)lineHeight * scaleFactor));
@@ -134,13 +174,13 @@ namespace DeltaTune.Window
         
         private Rectangle GetCurrentScreenBounds()
         {
-            System.Drawing.Rectangle boundsSystemType = Screen.FromHandle(window.Handle).WorkingArea;
+            System.Drawing.Rectangle boundsSystemType = currentScreen.WorkingArea;
             return new Rectangle(boundsSystemType.X, boundsSystemType.Y, boundsSystemType.Width, boundsSystemType.Height);
         }
         
         private int GetRecommendedScale()
         {
-            System.Drawing.Rectangle bounds = Screen.FromHandle(window.Handle).WorkingArea;
+            System.Drawing.Rectangle bounds = currentScreen.WorkingArea;
             return MathUtil.Clamp((int)Math.Ceiling(bounds.Width / 960f) + 1, 1, 8);
         }
 
@@ -168,9 +208,7 @@ namespace DeltaTune.Window
 
         public void Dispose()
         {
-            scaleFactorSubscription?.Dispose();
-            windowSizeSubscription?.Dispose();
-            windowTopmostIntervalSubscription?.Dispose();
+            subscriptions?.Dispose();
         }
     }
 }

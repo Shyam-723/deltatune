@@ -8,6 +8,7 @@ namespace DeltaTune.Settings
         bool IsFactorySettings { get; set; }
         ReactiveProperty<int> ScaleFactor { get; }
         ReactiveProperty<Vector2> Position { get; }
+        ReactiveProperty<string> ScreenName { get; }
         ReactiveProperty<bool> ShowArtistName { get; }
         ReactiveProperty<bool> ShowPlaybackStatus { get; }
         ReactiveProperty<bool> HideAutomatically { get; }
