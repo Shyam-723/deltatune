@@ -1,4 +1,5 @@
-﻿using System.Windows.Forms;
+﻿using System;
+using System.Windows.Forms;
 
 namespace DeltaTune
 {
@@ -15,11 +16,29 @@ namespace DeltaTune
                     MessageBox.Show("Another instance of DeltaTune is already running.\nTo close it, right-click the DeltaTune icon in your system tray and choose \"Quit\".", ProgramInfo.Name, MessageBoxButtons.OK);
                     return;
                 }
-                
-                using (var game = new DeltaTune())
+
+                #if DEBUG
+                RunGame();
+                #else
+                try
                 {
-                    game.Run();
+                    RunGame();
                 }
+                catch (Exception e)
+                {
+                    MessageBox.Show(
+                        $"An unknown error has occured.\nPlease report this as a bug and include a screenshot of this message.\n\nDetails:\n{e}",
+                        ProgramInfo.Name, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                #endif
+            }
+        }
+
+        private static void RunGame()
+        {
+            using (var game = new DeltaTune())
+            {
+                game.Run();
             }
         }
     }
