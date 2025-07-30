@@ -1,4 +1,6 @@
-﻿using DeltaTune.Display;
+﻿using System;
+using System.IO;
+using DeltaTune.Display;
 using DeltaTune.Media;
 using DeltaTune.Settings;
 using DeltaTune.Window;
@@ -11,6 +13,7 @@ namespace DeltaTune
 {
     public class DeltaTune : Game
     {
+        private string relativePathRoot;
         private GraphicsDeviceManager graphicsDeviceManagerInstance;
         private IWindowService windowService;
         private IMediaInfoService mediaInfoService;
@@ -30,7 +33,8 @@ namespace DeltaTune
                 PreferredBackBufferWidth = 1,
                 PreferredBackBufferHeight = 1
             };
-            
+
+            relativePathRoot = AppDomain.CurrentDomain.BaseDirectory;
             Content.RootDirectory = "Content";
             
             ObservableSystemComponent observableSystemComponent = new ObservableSystemComponent(this);
@@ -41,7 +45,7 @@ namespace DeltaTune
         protected override void Initialize()
         { 
             settingsService = new SettingsService();
-            settingsFile = new SettingsFile(settingsService, "Settings.json");
+            settingsFile = new SettingsFile(settingsService, Path.Combine(relativePathRoot, "Settings.json"));
             settingsMenu = new SettingsMenu(settingsService);
             
             mediaInfoService = new SystemMediaInfoService();
@@ -51,7 +55,7 @@ namespace DeltaTune
 
         protected override void LoadContent()
         {
-            musicTitleFont = BitmapFont.FromFile(GraphicsDevice, "Content/Fonts/MusicTitleFont.fnt");
+            musicTitleFont = BitmapFont.FromFile(GraphicsDevice, Path.Combine("Content", "Fonts", "MusicTitleFont.fnt"));
             musicTitleFont.FallbackCharacter = '▯';
             
             spriteBatch = new SpriteBatch(GraphicsDevice);

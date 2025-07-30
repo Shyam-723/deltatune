@@ -52,7 +52,7 @@ namespace DeltaTune.Settings
             catch (Exception e)
             {
                 MessageBox.Show(
-                    $"Failed to load settings from file at {Path.GetFullPath(filePath)}.\nYou can still use the program, but your settings will not be saved.\n\nDetails:\n{e}",
+                    $"Failed to load settings from file at {filePath}.\nYou can still use the program, but your settings will not be saved.\n\nDetails:\n{e}",
                     ProgramInfo.Name, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
@@ -91,7 +91,7 @@ namespace DeltaTune.Settings
             catch (Exception e)
             {
                 MessageBox.Show(
-                    $"Failed to save settings to file at {Path.GetFullPath(filePath)}.\nYou can still use the program, but your settings will not be saved.\n\nDetails:\n{e.Message}\n{e.StackTrace}",
+                    $"Failed to save settings to file at {filePath}.\nYou can still use the program, but your settings will not be saved.\n\nDetails:\n{e.Message}\n{e.StackTrace}",
                     ProgramInfo.Name, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
