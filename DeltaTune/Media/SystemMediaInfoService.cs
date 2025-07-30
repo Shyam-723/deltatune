@@ -62,35 +62,43 @@ namespace DeltaTune.Media
         
         private async void OnMediaPropertiesChanged(GlobalSystemMediaTransportControlsSession sender, MediaPropertiesChangedEventArgs args)
         {
-            GlobalSystemMediaTransportControlsSessionMediaProperties mediaProperties = await sender.TryGetMediaPropertiesAsync();
-            if (mediaProperties != null && (mediaProperties.Title != lastMediaInfo.Title || mediaProperties.Artist != lastMediaInfo.Artist))
+            try
             {
-                string correctedArtist = mediaProperties.Artist.Trim();
-                string correctedTitle = mediaProperties.Title.Trim();
-                
-                // Remove YouTube's "- Topic" suffix
-                if (correctedArtist.EndsWith(" - Topic"))
+                GlobalSystemMediaTransportControlsSessionMediaProperties mediaProperties = await sender.TryGetMediaPropertiesAsync();
+
+                if (mediaProperties != null && (mediaProperties.Title != lastMediaInfo.Title || mediaProperties.Artist != lastMediaInfo.Artist))
                 {
-                    correctedArtist = correctedArtist.Substring(0, correctedArtist.Length - 8);
+                    string correctedArtist = mediaProperties.Artist.Trim();
+                    string correctedTitle = mediaProperties.Title.Trim();
+
+                    // Remove YouTube's "- Topic" suffix
+                    if (correctedArtist.EndsWith(" - Topic"))
+                    {
+                        correctedArtist = correctedArtist.Substring(0, correctedArtist.Length - 8);
+                    }
+
+                    // Remove artist prefix from the title if it exists
+                    if (correctedTitle.StartsWith($"{correctedArtist} - "))
+                    {
+                        correctedTitle = correctedTitle.Remove(0, $"{correctedArtist} - ".Length);
+                    }
+
+                    // Remove artist suffix from the title if it exists
+                    if (correctedTitle.EndsWith($" - {correctedArtist}"))
+                    {
+                        int startIndex = correctedTitle.LastIndexOf($" - {correctedArtist}", StringComparison.Ordinal);
+                        correctedTitle = correctedTitle.Remove(startIndex);
+                    }
+
+                    MediaInfo update = new MediaInfo(correctedTitle, correctedArtist, lastMediaInfo.Status);
+
+                    UpdateQueue.Enqueue(update);
+                    lastMediaInfo = update;
                 }
-                
-                // Remove artist prefix from the title if it exists
-                if (correctedTitle.StartsWith($"{correctedArtist} - "))
-                {
-                    correctedTitle = correctedTitle.Remove(0, $"{correctedArtist} - ".Length);
-                }
-                
-                // Remove artist suffix from the title if it exists
-                if (correctedTitle.EndsWith($" - {correctedArtist}"))
-                {
-                    int startIndex = correctedTitle.LastIndexOf($" - {correctedArtist}", StringComparison.Ordinal);
-                    correctedTitle = correctedTitle.Remove(startIndex);
-                }
-                
-                MediaInfo update = new MediaInfo(correctedTitle, correctedArtist, lastMediaInfo.Status);
-                
-                UpdateQueue.Enqueue(update);
-                lastMediaInfo = update;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error retrieving media properties: {ex.Message}");
             }
         }
 
