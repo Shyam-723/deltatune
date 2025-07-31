@@ -37,6 +37,9 @@ namespace MonoGame.Extended.BitmapFonts
             if (effect != SpriteEffects.None)
                 throw new NotSupportedException($"{effect} is not currently supported for {nameof(BitmapFont)}");
 
+            origin.X -= bitmapFont.Outline;
+            origin.Y -= bitmapFont.Outline;
+
             var glyphs = bitmapFont.GetGlyphs(text, position);
             foreach (var glyph in glyphs)
             {

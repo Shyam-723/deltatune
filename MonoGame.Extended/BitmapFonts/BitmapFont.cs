@@ -20,17 +20,19 @@ namespace MonoGame.Extended.BitmapFonts
         public string Face { get; }
         public int Size { get; }
         public int LineHeight { get; }
-
         public int LetterSpacing { get; set; }
+        public int Outline { get; set; }
 
         public bool UseKernings { get; set; } = true;
         public char? FallbackCharacter { get; set; } = null;
 
-        public BitmapFont(string face, int size, int lineHeight, IEnumerable<BitmapFontCharacter> characters)
+        public BitmapFont(string face, int size, int lineHeight, int outline,
+            IEnumerable<BitmapFontCharacter> characters)
         {
             Face = face;
             Size = size;
             LineHeight = lineHeight;
+            Outline = outline;
             _characters = new Dictionary<int, BitmapFontCharacter>();
 
             foreach (BitmapFontCharacter character in characters)
@@ -114,6 +116,11 @@ namespace MonoGame.Extended.BitmapFonts
                     rectangle.Height += LineHeight;
             }
 
+            rectangle.X -= Outline;
+            rectangle.Y -= Outline;
+            rectangle.Width += Outline * 2;
+            rectangle.Height += Outline * 2;
+
             return rectangle;
         }
 
@@ -137,6 +144,11 @@ namespace MonoGame.Extended.BitmapFonts
                     rectangle.Height += LineHeight;
             }
 
+            rectangle.X -= Outline;
+            rectangle.Y -= Outline;
+            rectangle.Width += Outline * 2;
+            rectangle.Height += Outline * 2;
+            
             return rectangle;
         }
 
@@ -447,7 +459,7 @@ namespace MonoGame.Extended.BitmapFonts
                 }
             }
 
-            return new BitmapFont(bmfFile.FontName, bmfFile.Info.FontSize, bmfFile.Common.LineHeight, characters.Values);
+            return new BitmapFont(bmfFile.FontName, bmfFile.Info.FontSize, bmfFile.Common.LineHeight + bmfFile.Info.Outline * 2, bmfFile.Info.Outline, characters.Values);
         }
     }
 }
