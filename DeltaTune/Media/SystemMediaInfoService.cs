@@ -68,6 +68,12 @@ namespace DeltaTune.Media
 
                 if (mediaProperties != null && (mediaProperties.Title != lastMediaInfo.Title || mediaProperties.Artist != lastMediaInfo.Artist))
                 {
+                    // Reject updates with empty title or artist
+                    if(mediaProperties.Title == string.Empty || mediaProperties.Artist == string.Empty)
+                    {
+                        return;
+                    }
+
                     string correctedArtist = mediaProperties.Artist.Trim();
                     string correctedTitle = mediaProperties.Title.Trim();
 
