@@ -61,7 +61,7 @@ namespace MonoGame.Extended.Content.ContentReaders
                 }
             }
 
-            return new BitmapFont(fontName, fontSize, lineHeight, 0, characters.Values);
+            return new BitmapFont(fontName, fontSize, lineHeight, 0, 0, characters.Values);
         }
     }
 }

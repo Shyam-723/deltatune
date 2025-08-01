@@ -234,7 +234,7 @@ namespace MonoGame.Extended.Content
                     }
                 }
 
-                var bmfFont = new BitmapFont(bmfFile.FontName, bmfFile.Info.FontSize, bmfFile.Common.LineHeight + bmfFile.Info.Outline * 2, bmfFile.Info.Outline,
+                var bmfFont = new BitmapFont(bmfFile.FontName, bmfFile.Info.FontSize, bmfFile.Common.LineHeight + bmfFile.Info.Outline * 2, bmfFile.Info.Outline, bmfFile.Common.Base,
                     characters.Values);
                 CacheAsset(path, font);
                 return font;

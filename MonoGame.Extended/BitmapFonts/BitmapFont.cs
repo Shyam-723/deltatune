@@ -22,17 +22,20 @@ namespace MonoGame.Extended.BitmapFonts
         public int LineHeight { get; }
         public int LetterSpacing { get; set; }
         public int Outline { get; set; }
+        public int Base { get; set; }
 
         public bool UseKernings { get; set; } = true;
-        public char? FallbackCharacter { get; set; } = null;
+        public BitmapFont FallbackFont { get; set; }
+        public char? FallbackCharacter { get; set; }
 
-        public BitmapFont(string face, int size, int lineHeight, int outline,
+        public BitmapFont(string face, int size, int lineHeight, int outline, int baseline,
             IEnumerable<BitmapFontCharacter> characters)
         {
             Face = face;
             Size = size;
             LineHeight = lineHeight;
             Outline = outline;
+            Base = baseline;
             _characters = new Dictionary<int, BitmapFontCharacter>();
 
             foreach (BitmapFontCharacter character in characters)
@@ -41,35 +44,24 @@ namespace MonoGame.Extended.BitmapFonts
             }
         }
 
-        public BitmapFontCharacter GetCharacter(int character)
-        {
-            if (_characters.TryGetValue(character, out BitmapFontCharacter fontCharacter))
-            {
-                return fontCharacter;
-            }
-            else if (FallbackCharacter != null && character != FallbackCharacter.Value)
-            {
-                return GetCharacter(FallbackCharacter.Value);
-            }
-            else
-            {
-                return null;
-            }
-            /*  _characters[character];*/
-        }
-
-        public bool TryGetCharacter(int character, out BitmapFontCharacter value)
+        public bool TryGetCharacter(int character, out BitmapFontCharacter value, out BitmapFont usedFont)
         {
             if (_characters.TryGetValue(character, out value))
+            {
+                usedFont = this;
+                return true;
+            }
+            else if (FallbackFont != null && FallbackFont.TryGetCharacter(character, out value, out usedFont))
             {
                 return true;
             }
             else if (FallbackCharacter != null && character != FallbackCharacter.Value)
             {
-                return TryGetCharacter(FallbackCharacter.Value, out value);
+                return TryGetCharacter(FallbackCharacter.Value, out value, out usedFont);
             }
             else
             {
+                usedFont = null;
                 return false;
             }
         }
@@ -232,11 +224,16 @@ namespace MonoGame.Extended.BitmapFonts
 
                 var character = GetUnicodeCodePoint(_text, ref _index);
                 _currentGlyph.CharacterID = character;
-                _font.TryGetCharacter(character, out _currentGlyph.Character);
+                
+                bool found = _font.TryGetCharacter(character, out _currentGlyph.Character, out BitmapFont usedFont);
+                
                 _currentGlyph.Position = _position + _positionDelta;
-
-                if (_currentGlyph.Character != null)
+                
+                if (found)
                 {
+                    int baselineOffset = usedFont == _font ? 0 : _font.Base - usedFont.Base;
+                    _currentGlyph.Position.Y += baselineOffset;
+                    
                     _currentGlyph.Position.X += _currentGlyph.Character.XOffset;
                     _currentGlyph.Position.Y += _currentGlyph.Character.YOffset;
                     _positionDelta.X += _currentGlyph.Character.XAdvance + _font.LetterSpacing;
@@ -344,16 +341,22 @@ namespace MonoGame.Extended.BitmapFonts
                 if (++_index >= _text.Length)
                     return false;
 
-                var character = GetUnicodeCodePoint(_text, ref _index);
+                var unicodeCodePoint = GetUnicodeCodePoint(_text, ref _index);
+                
+                bool found = _font.TryGetCharacter(unicodeCodePoint, out BitmapFontCharacter character, out BitmapFont usedFont);
+                
                 _currentGlyph = new BitmapFontGlyph
                 {
-                    CharacterID = character,
-                    Character = _font.GetCharacter(character),
+                    CharacterID = unicodeCodePoint,
+                    Character = character,
                     Position = _position + _positionDelta
                 };
-
-                if (_currentGlyph.Character != null)
+                
+                if (found)
                 {
+                    int baselineOffset = usedFont == _font ? 0 : _font.Base - usedFont.Base;
+                    _currentGlyph.Position.Y += baselineOffset;
+                    
                     _currentGlyph.Position.X += _currentGlyph.Character.XOffset;
                     _currentGlyph.Position.Y += _currentGlyph.Character.YOffset;
                     _positionDelta.X += _currentGlyph.Character.XAdvance + _font.LetterSpacing;
@@ -362,7 +365,7 @@ namespace MonoGame.Extended.BitmapFonts
                 if (_font.UseKernings && _previousGlyph.HasValue && _previousGlyph.Value.Character != null)
                 {
                     int amount;
-                    if (_previousGlyph.Value.Character.Kernings.TryGetValue(character, out amount))
+                    if (_previousGlyph.Value.Character.Kernings.TryGetValue(unicodeCodePoint, out amount))
                     {
                         _positionDelta.X += amount;
                         _currentGlyph.Position.X += amount;
@@ -371,7 +374,7 @@ namespace MonoGame.Extended.BitmapFonts
 
                 _previousGlyph = _currentGlyph;
 
-                if (character != '\n')
+                if (unicodeCodePoint != '\n')
                     return true;
 
                 _positionDelta.Y += _font.LineHeight;
@@ -459,7 +462,7 @@ namespace MonoGame.Extended.BitmapFonts
                 }
             }
 
-            return new BitmapFont(bmfFile.FontName, bmfFile.Info.FontSize, bmfFile.Common.LineHeight + bmfFile.Info.Outline * 2, bmfFile.Info.Outline, characters.Values);
+            return new BitmapFont(bmfFile.FontName, bmfFile.Info.FontSize, bmfFile.Common.LineHeight + bmfFile.Info.Outline * 2, bmfFile.Info.Outline, bmfFile.Common.Base, characters.Values);
         }
     }
 }

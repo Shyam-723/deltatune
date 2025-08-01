@@ -24,6 +24,7 @@ namespace DeltaTune
 
         private SpriteBatch spriteBatch;
         private BitmapFont musicTitleFont;
+        private BitmapFont fallbackFont;
         
         public DeltaTune()
         {
@@ -55,7 +56,10 @@ namespace DeltaTune
 
         protected override void LoadContent()
         {
+            fallbackFont = BitmapFont.FromFile(GraphicsDevice, Path.Combine("Content", "Fonts", "ShinonomeGothic.fnt"));
+            
             musicTitleFont = BitmapFont.FromFile(GraphicsDevice, Path.Combine("Content", "Fonts", "MusicTitleFont.fnt"));
+            musicTitleFont.FallbackFont = fallbackFont;
             musicTitleFont.FallbackCharacter = '▯';
             
             spriteBatch = new SpriteBatch(GraphicsDevice);
