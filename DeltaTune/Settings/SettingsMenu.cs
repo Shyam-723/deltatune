@@ -1,11 +1,15 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Windows.Forms;
 using DeltaTune.Window;
+using SharpDX;
 
 namespace DeltaTune.Settings
 {
     public class SettingsMenu : ISettingsMenu
     {
+        private static readonly float[] hideAutomaticallyDelayOptions = new[] { 1f, 2.5f, 5f, 7.5f, 10f };
+        
         private readonly ISettingsService settingsService;
         private ContextMenuStrip settingsMenuStrip;
 
@@ -138,6 +142,26 @@ namespace DeltaTune.Settings
             ToolStripMenuItem behaviorItem = new ToolStripMenuItem();
             behaviorItem.Text = "Behavior";
             
+            ToolStripMenuItem hideAutomaticallyItem = new ToolStripMenuItem();
+            hideAutomaticallyItem.Text = "Hide Automatically";
+            behaviorItem.DropDownItems.Add(hideAutomaticallyItem);
+            
+            ToolStripMenuItem hideNeverItem = new ToolStripMenuItem();
+            hideNeverItem.Text = "Never";
+            hideNeverItem.Checked = settingsService.HideAutomatically.Value == null;
+            hideNeverItem.Click += (sender, args) => settingsService.HideAutomatically.Value = null;
+            hideAutomaticallyItem.DropDownItems.Add(hideNeverItem);
+
+            foreach (float option in hideAutomaticallyDelayOptions)
+            {
+                float delay = option;
+                ToolStripMenuItem hideDelayItem = new ToolStripMenuItem();
+                hideDelayItem.Text = $"After {delay.ToString("F1", NumberFormatInfo.InvariantInfo)} Seconds";
+                hideDelayItem.Checked = settingsService.HideAutomatically.Value != null && MathUtil.NearEqual(settingsService.HideAutomatically.Value.Value, delay);
+                hideDelayItem.Click += (sender, args) => settingsService.HideAutomatically.Value = delay;
+                hideAutomaticallyItem.DropDownItems.Add(hideDelayItem);
+            }
+            
             ToolStripMenuItem showArtistNameItem = new ToolStripMenuItem();
             showArtistNameItem.Text = "Show Artist Name";
             showArtistNameItem.Checked = settingsService.ShowArtistName.Value;
@@ -149,12 +173,6 @@ namespace DeltaTune.Settings
             showPlaybackStatusItem.Checked = settingsService.ShowPlaybackStatus.Value;
             showPlaybackStatusItem.Click += (sender, args) => settingsService.ShowPlaybackStatus.Value = !settingsService.ShowPlaybackStatus.Value;
             behaviorItem.DropDownItems.Add(showPlaybackStatusItem);
-            
-            ToolStripMenuItem hideAutomaticallyItem = new ToolStripMenuItem();
-            hideAutomaticallyItem.Text = "Hide Automatically";
-            hideAutomaticallyItem.Checked = settingsService.HideAutomatically.Value;
-            hideAutomaticallyItem.Click += (sender, args) => settingsService.HideAutomatically.Value = !settingsService.HideAutomatically.Value;
-            behaviorItem.DropDownItems.Add(hideAutomaticallyItem);
             
             ToolStripMenuItem screenCaptureCompatItem = new ToolStripMenuItem();
             screenCaptureCompatItem.Text = "Streamer Mode";

@@ -109,12 +109,12 @@ namespace DeltaTune.Display
                         positionOffset.X = 0;
                     }
 
-                    if (settingsService.HideAutomatically.Value && animationTimer >= StayTime)
+                    if (settingsService.HideAutomatically.Value != null && animationTimer >= settingsService.HideAutomatically.Value.Value)
                     {
                         State = MusicTitleDisplayState.Disappearing;
                     }
 
-                    if (!settingsService.HideAutomatically.Value && !settingsService.ShowPlaybackStatus.Value && animationTimer >= StayTime &&
+                    if (settingsService.HideAutomatically.Value == null && !settingsService.ShowPlaybackStatus.Value && animationTimer >= StayTime &&
                         (content.Status == PlaybackStatus.Stopped || content.Status == PlaybackStatus.Paused))
                     {
                         State = MusicTitleDisplayState.Disappearing;

@@ -9,7 +9,7 @@ namespace DeltaTune.Settings
         public string ScreenName { get; set; } = string.Empty;
         public bool ShowArtistName { get; set; } =  true;
         public bool ShowPlaybackStatus { get; set; } = false;
-        public bool HideAutomatically { get; set; } = true;
+        public float? HideAutomatically { get; set; } = 2.5f;
         public bool ScreenCaptureCompatibilityMode { get; set; } = false;
 
         public void FromSettings(ISettingsService settingsService)
