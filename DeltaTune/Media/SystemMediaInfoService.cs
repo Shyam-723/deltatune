@@ -23,7 +23,7 @@ namespace DeltaTune.Media
                 currentSessionManager = sessionManager;
                 sessionManager.CurrentSessionChanged += OnCurrentSessionChanged;
                 
-                OnCurrentSessionChanged(sessionManager, null);
+                await Task.Run(() => OnCurrentSessionChanged(sessionManager, null));
             }).Wait();
         }
         
@@ -60,11 +60,11 @@ namespace DeltaTune.Media
             }
         }
         
-        private async void OnMediaPropertiesChanged(GlobalSystemMediaTransportControlsSession sender, MediaPropertiesChangedEventArgs args)
+        private void OnMediaPropertiesChanged(GlobalSystemMediaTransportControlsSession sender, MediaPropertiesChangedEventArgs args)
         {
             try
             {
-                MediaInfo? newMediaInfo = await GetCurrentMediaInfo(sender);
+                MediaInfo? newMediaInfo = GetCurrentMediaInfo(sender).Result;
                 if (newMediaInfo != null && (newMediaInfo.Value.Title != lastMediaInfo.Title || newMediaInfo.Value.Artist != lastMediaInfo.Artist))
                 {
                     // Reject updates with empty title or artist
@@ -83,7 +83,7 @@ namespace DeltaTune.Media
             }
         }
 
-        private async void OnPlaybackInfoChanged(GlobalSystemMediaTransportControlsSession sender, PlaybackInfoChangedEventArgs args)
+        private void OnPlaybackInfoChanged(GlobalSystemMediaTransportControlsSession sender, PlaybackInfoChangedEventArgs args)
         {
             try
             {
@@ -91,14 +91,13 @@ namespace DeltaTune.Media
                 PlaybackStatus newStatus = PlaybackStatusHelper.FromSystemPlaybackStatus(playbackInfo.PlaybackStatus);
                 if (newStatus != lastMediaInfo.Status)
                 {
-                    MediaInfo? newMediaInfo = await GetCurrentMediaInfo(sender);
+                    MediaInfo? newMediaInfo = GetCurrentMediaInfo(sender).Result;
                     if (newMediaInfo != null)
                     {
                         lastMediaInfo = newMediaInfo.Value;
                     }
                     
                     MediaInfo update = new MediaInfo(lastMediaInfo.Title, lastMediaInfo.Artist, newStatus);
-                    lastMediaInfo = update;
 
                     // Reject updates with empty title or artist
                     if (update.Title == string.Empty || update.Artist == string.Empty)
@@ -107,6 +106,7 @@ namespace DeltaTune.Media
                     }
 
                     UpdateQueue.Enqueue(update);
+                    lastMediaInfo = update;
                 }
             }
             catch (Exception ex)
