@@ -181,7 +181,7 @@ namespace DeltaTune.Settings
             {
                 if (!settingsService.ScreenCaptureCompatibilityMode.Value)
                 {
-                    DialogResult result = MessageBox.Show($"Streamer Mode improves DeltaTune's compatibility with screen capture software by making it usable with window capturing and allowing its window to disappear behind others.\n" +
+                    DialogResult result = MessageBox.Show($"Streamer Mode improves DeltaTune's compatibility with screen capture software by making it show up as an option for window capture and allowing its window to disappear behind others.\n" +
                                                           $"It is not intended for normal use outside of this purpose.\n\n" +
                                                           $"Do you want to enable it?", ProgramInfo.Name, MessageBoxButtons.YesNo, MessageBoxIcon.None);
                 
