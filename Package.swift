@@ -18,7 +18,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "SpotifyOverlay",
-            dependencies: []
+            dependencies: [],
+            resources: [
+                .copy("Resources")
+            ]
         ),
     ]
 )

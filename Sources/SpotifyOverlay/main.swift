@@ -42,7 +42,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Create window frame - positioned in top-right area like your reference
         let windowWidth: CGFloat = 600
-        let windowHeight: CGFloat = 30 // Back to reasonable height
+        let windowHeight: CGFloat = 40 // Increased height for bigger text
         let windowFrame = NSRect(
             x: screenFrame.width - windowWidth - 20, // 20px from right edge
             y: screenFrame.height - windowHeight - 80, // 80px from top (more space below menu bar)
@@ -102,7 +102,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         if let screenFrame = activeScreen?.frame {
             let windowWidth: CGFloat = 600
-            let windowHeight: CGFloat = 30
+            let windowHeight: CGFloat = 40
             let newFrame = NSRect(
                 x: screenFrame.width - windowWidth - 20 + screenFrame.origin.x,
                 y: screenFrame.height - windowHeight - 80 + screenFrame.origin.y,
