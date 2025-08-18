@@ -11,10 +11,15 @@ app.run()
 class AppDelegate: NSObject, NSApplicationDelegate {
     var overlayWindow: NSWindow?
     var spotifyMonitor: SpotifyMonitor?
+    var settingsWindow: NSWindow?
+    var statusItem: NSStatusItem?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Hide dock icon and menu bar
+        // Hide dock icon but keep menu bar access
         NSApp.setActivationPolicy(.accessory)
+        
+        // Create status bar item
+        createStatusBarItem()
         
         // Create overlay window
         createOverlayWindow()
@@ -26,9 +31,49 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         spotifyMonitor?.startMonitoring()
+    }
+    
+    private func createStatusBarItem() {
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         
-        // Spotify monitoring is now working!
-
+        if let button = statusItem?.button {
+            button.image = NSImage(systemSymbolName: "music.note", accessibilityDescription: "Spotify Overlay")
+            button.action = #selector(statusBarButtonClicked)
+            button.target = self
+        }
+        
+        let menu = NSMenu()
+        menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        
+        statusItem?.menu = menu
+    }
+    
+    @objc private func statusBarButtonClicked() {
+        // This will show the menu
+    }
+    
+    @objc private func openSettings() {
+        if settingsWindow == nil {
+            let settingsView = SettingsView()
+            let hostingView = NSHostingView(rootView: settingsView)
+            
+            settingsWindow = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 500, height: 400),
+                styleMask: [.titled, .closable],
+                backing: .buffered,
+                defer: false
+            )
+            
+            settingsWindow?.title = "Spotify Overlay Settings"
+            settingsWindow?.contentView = hostingView
+            settingsWindow?.center()
+            settingsWindow?.isReleasedWhenClosed = false
+        }
+        
+        settingsWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
     
     private func createOverlayWindow() {
@@ -40,15 +85,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         let screenFrame = activeScreen?.frame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
         
-        // Create window frame - positioned in top-right area like your reference
-        let windowWidth: CGFloat = 600
-        let windowHeight: CGFloat = 40 // Increased height for bigger text
-        let windowFrame = NSRect(
-            x: screenFrame.width - windowWidth - 20, // 20px from right edge
-            y: screenFrame.height - windowHeight - 80, // 80px from top (more space below menu bar)
-            width: windowWidth,
-            height: windowHeight
-        )
+        // Create window frame using settings
+        let windowSize = NSSize(width: 600, height: 40)
+        let windowFrame = Settings.shared.getWindowFrame(for: screenFrame, windowSize: windowSize)
         
         overlayWindow = NSWindow(
             contentRect: windowFrame,
@@ -94,21 +133,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func showWithAnimation() {
         guard let window = overlayWindow else { return }
         
-        // Position on the current active screen
+        // Position on the current active screen using settings
         let mouseLocation = NSEvent.mouseLocation
         let activeScreen = NSScreen.screens.first { screen in
             NSMouseInRect(mouseLocation, screen.frame, false)
         } ?? NSScreen.main
         
         if let screenFrame = activeScreen?.frame {
-            let windowWidth: CGFloat = 600
-            let windowHeight: CGFloat = 40
-            let newFrame = NSRect(
-                x: screenFrame.width - windowWidth - 20 + screenFrame.origin.x,
-                y: screenFrame.height - windowHeight - 80 + screenFrame.origin.y,
-                width: windowWidth,
-                height: windowHeight
-            )
+            let windowSize = NSSize(width: 600, height: 40)
+            let newFrame = Settings.shared.getWindowFrame(for: screenFrame, windowSize: windowSize)
             window.setFrame(newFrame, display: false)
         }
         
@@ -126,8 +159,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.animator().setFrame(originalFrame, display: true)
         }
         
-        // Auto-hide after 4 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+        // Auto-hide after user-defined duration
+        DispatchQueue.main.asyncAfter(deadline: .now() + Settings.shared.displayDuration) {
             self.hideWithAnimation()
         }
     }

@@ -3,23 +3,34 @@ import AppKit
 
 struct OverlayView: View {
     let trackInfo: TrackInfo?
+    @ObservedObject private var settings = Settings.shared
     private let customFont: Font?
     
     init(trackInfo: TrackInfo? = nil) {
         self.trackInfo = trackInfo
         
-        // Load the custom TTF font
+        // Load the custom font (either user's custom font or bundled font)
         var fontURL: URL?
         
-        // Try to find the font in the module bundle
-        if let moduleBundle = Bundle.module.url(forResource: "NewMusticTitleFont", withExtension: "ttf") {
-            fontURL = moduleBundle
-        } else if let moduleBundle = Bundle.module.url(forResource: "Resources/NewMusticTitleFont", withExtension: "ttf") {
-            fontURL = moduleBundle
-        } else if let mainBundle = Bundle.main.url(forResource: "NewMusticTitleFont", withExtension: "ttf") {
-            fontURL = mainBundle
-        } else if let mainBundle = Bundle.main.url(forResource: "Resources/NewMusticTitleFont", withExtension: "ttf") {
-            fontURL = mainBundle
+        // First try user's custom font
+        if let customPath = Settings.shared.customFontPath {
+            let customURL = URL(fileURLWithPath: customPath)
+            if FileManager.default.fileExists(atPath: customPath) {
+                fontURL = customURL
+            }
+        }
+        
+        // If no custom font, try bundled font
+        if fontURL == nil {
+            if let moduleBundle = Bundle.module.url(forResource: "NewMusticTitleFont", withExtension: "ttf") {
+                fontURL = moduleBundle
+            } else if let moduleBundle = Bundle.module.url(forResource: "Resources/NewMusticTitleFont", withExtension: "ttf") {
+                fontURL = moduleBundle
+            } else if let mainBundle = Bundle.main.url(forResource: "NewMusticTitleFont", withExtension: "ttf") {
+                fontURL = mainBundle
+            } else if let mainBundle = Bundle.main.url(forResource: "Resources/NewMusticTitleFont", withExtension: "ttf") {
+                fontURL = mainBundle
+            }
         }
         
         if let fontURL = fontURL {
@@ -31,16 +42,16 @@ struct OverlayView: View {
                let fontDescriptor = fontDescriptors.first,
                let fontName = CTFontDescriptorCopyAttribute(fontDescriptor, kCTFontFamilyNameAttribute) as? String {
                 print("Loaded font with family name: \(fontName)")
-                self.customFont = Font.custom(fontName, size: 30)
+                self.customFont = Font.custom(fontName, size: Settings.shared.fontSize)
             } else {
                 // Try common variations of the font name
-                print("Trying font name: NewMusticTitleFont")
-                self.customFont = Font.custom("NewMusticTitleFont", size: 18)
+                print("Trying font name from file")
+                let fontName = fontURL.deletingPathExtension().lastPathComponent
+                self.customFont = Font.custom(fontName, size: Settings.shared.fontSize)
             }
         } else {
-            print("Failed to find TTF font file in any bundle")
-            // Fallback to system font if TTF loading fails
-            self.customFont = Font.system(size: 18, weight: .bold, design: .monospaced)
+            print("No custom font found, using system font")
+            self.customFont = nil
         }
     }
     
@@ -48,12 +59,12 @@ struct OverlayView: View {
         HStack(spacing: 8) {
             if let trackInfo = trackInfo {
                 Text("♪")
-                    .font(customFont)
-                    .foregroundColor(.white)
+                    .font(customFont ?? Font.system(size: settings.fontSize, weight: .bold, design: .monospaced))
+                    .foregroundColor(Color(red: 0.0, green: 1.0, blue: 0.8))
                 
                 Text("\(trackInfo.artist) - \(trackInfo.title)")
-                    .font(customFont)
-                    .foregroundColor(.white)
+                    .font(customFont ?? Font.system(size: settings.fontSize, weight: .bold, design: .monospaced))
+                    .foregroundColor(Color(red: 0.0, green: 1.0, blue: 0.8))
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
